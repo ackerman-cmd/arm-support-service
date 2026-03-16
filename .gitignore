@@ -42,3 +42,5 @@ out/
 .idea/
 
 secrets.yaml
+.gitattributes
+gradlew.bat
