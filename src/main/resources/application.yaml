@@ -1,0 +1,50 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: arm-support-service
+
+  config:
+    import: optional:file:./secrets.yaml
+
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:6434}/${POSTGRES_DB:user_service}?currentSchema=${POSTGRES_SCHEMA:arm_support}
+    username: ${POSTGRES_USER:admin}
+    password: ${POSTGRES_PASSWORD:secret}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: ${POSTGRES_SCHEMA:arm_support}
+        format_sql: true
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    default-schema: ${POSTGRES_SCHEMA:arm_support}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: arm-support-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      enable-auto-commit: false
+      properties:
+        max.poll.records: 10
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${USER_SERVICE_URL:http://localhost:8080}
+
+app:
+  kafka:
+    topics:
+      user-sync: user-sync
