@@ -1,3 +1,11 @@
 databaseChangeLog:
   - include:
       file: db/changelog/001-create-synced-users.sql
+  - include:
+      file: db/changelog/002-create-organizations.sql
+  - include:
+      file: db/changelog/003-create-groups.sql
+  - include:
+      file: db/changelog/004-create-appeals.sql
+  - include:
+      file: db/changelog/005-create-appeal-messages.sql

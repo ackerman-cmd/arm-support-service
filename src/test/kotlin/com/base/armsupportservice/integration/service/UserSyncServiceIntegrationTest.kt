@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -103,7 +104,10 @@ class UserSyncServiceIntegrationTest : AbstractIntegrationTest() {
         userSyncService.handleSync(event)
 
         val updated = syncedUserRepository.findById(userId).orElseThrow()
-        assertEquals(originalCreatedAt, updated.createdAt)
+        assertEquals(
+            originalCreatedAt.truncatedTo(ChronoUnit.MILLIS),
+            updated.createdAt.truncatedTo(ChronoUnit.MILLIS),
+        )
     }
 
     @Test

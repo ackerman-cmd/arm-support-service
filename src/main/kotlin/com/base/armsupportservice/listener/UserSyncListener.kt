@@ -18,9 +18,19 @@ class UserSyncListener(
 ) {
     private val log = LoggerFactory.getLogger(UserSyncListener::class.java)
 
+    /**
+     * @KafkaHandler диспатчит по типу payload, который возвращает MessageConverter.
+     * StringJsonMessageConverter конвертирует JSON → UserSyncEvent, поэтому принимаем
+     * десериализованный объект напрямую, а не ConsumerRecord<String, UserSyncEvent>
+     * (из-за стирания generics ConsumerRecord не совпадал бы с типом payload при диспатче).
+     */
     @KafkaHandler
     fun onUserSync(event: UserSyncEvent) {
-        log.debug("Received user-sync event: userId={}, type={}", event.userId, event.eventType)
+        log.debug(
+            "Received user-sync: userId={}, eventType={}",
+            event.userId,
+            event.eventType,
+        )
         userSyncService.handleSync(event)
     }
 
