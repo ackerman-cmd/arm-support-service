@@ -1,0 +1,15 @@
+.git
+.github
+.gradle
+build/**
+!build/libs/
+!build/libs/*.jar
+bin
+out
+.idea
+.vscode
+*.iml
+.kotlin
+HELP.md
+secrets.yaml
+**/.DS_Store
