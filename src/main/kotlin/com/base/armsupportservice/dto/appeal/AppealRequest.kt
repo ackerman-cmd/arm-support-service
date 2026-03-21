@@ -23,7 +23,6 @@ data class AppealRequest(
     val contactEmail: String? = null,
     @field:Size(max = 32)
     val contactPhone: String? = null,
-    /** Назначить обращение оператору сразу при создании */
     val assignedOperatorId: UUID? = null,
     val assignmentGroupId: UUID? = null,
     val skillGroupId: UUID? = null,

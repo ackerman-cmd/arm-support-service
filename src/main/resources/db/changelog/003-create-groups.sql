@@ -18,8 +18,6 @@ CREATE TABLE arm_support.assignment_group_operators
 
 CREATE INDEX idx_assignment_group_operators_operator ON arm_support.assignment_group_operators (operator_id);
 
--- -----------------------------------------------------------------------
-
 CREATE TABLE arm_support.skill_groups
 (
     id          UUID         NOT NULL PRIMARY KEY,

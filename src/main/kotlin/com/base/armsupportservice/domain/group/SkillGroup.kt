@@ -13,10 +13,6 @@ import jakarta.persistence.Table
 import java.time.LocalDateTime
 import java.util.UUID
 
-/**
- * Скилл-группа — объединяет операторов по набору компетенций (навыков).
- * Позволяет маршрутизировать обращение к специалистам нужного профиля.
- */
 @Entity
 @Table(name = "skill_groups", schema = "arm_support")
 class SkillGroup(

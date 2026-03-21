@@ -9,6 +9,5 @@ data class AppealMessageRequest(
     val content: String,
     @field:NotNull(message = "Канал отправки обязателен")
     val channel: AppealChannel,
-    /** ID сообщения во внешней системе (email Message-Id, Telegram message_id) */
     val externalMessageId: String? = null,
 )

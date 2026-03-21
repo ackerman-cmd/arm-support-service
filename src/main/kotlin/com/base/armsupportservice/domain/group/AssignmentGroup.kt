@@ -13,10 +13,6 @@ import jakarta.persistence.Table
 import java.time.LocalDateTime
 import java.util.UUID
 
-/**
- * Группа назначения — организационный контейнер для операторов.
- * Обращение можно адресовать конкретной группе, а не одному оператору.
- */
 @Entity
 @Table(name = "assignment_groups", schema = "arm_support")
 class AssignmentGroup(

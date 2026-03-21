@@ -15,13 +15,10 @@ class Organization(
     @Id
     val id: UUID = UUID.randomUUID(),
     var name: String,
-    /** ИНН — уникален */
     @Column(unique = true, nullable = false, length = 12)
     var inn: String,
-    /** КПП */
     @Column(length = 9)
     var kpp: String? = null,
-    /** ОГРН */
     @Column(length = 15)
     var ogrn: String? = null,
     @Column(columnDefinition = "TEXT")

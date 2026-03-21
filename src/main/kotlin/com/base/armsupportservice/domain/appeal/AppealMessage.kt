@@ -20,7 +20,6 @@ class AppealMessage(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "appeal_id", nullable = false)
     val appeal: Appeal,
-    /** UUID оператора из synced_users; null если сообщение от клиента */
     val senderId: UUID? = null,
     @Enumerated(EnumType.STRING)
     val senderType: MessageSenderType,
@@ -28,10 +27,6 @@ class AppealMessage(
     val content: String,
     @Enumerated(EnumType.STRING)
     val channel: AppealChannel,
-    /**
-     * ID сообщения во внешней системе (email Message-Id, Telegram message_id и т.п.).
-     * Используется для дедупликации при получении входящих сообщений.
-     */
     @Column(length = 512)
     val externalMessageId: String? = null,
     @Column(updatable = false)

@@ -127,10 +127,6 @@ class AppealService(
         return toResponse(appealRepository.save(appeal))
     }
 
-    /**
-     * Взять обращение в работу.
-     * Автоматически назначает текущего оператора и переводит статус в IN_PROGRESS.
-     */
     @Transactional
     fun takeIntoWork(
         id: UUID,
@@ -143,10 +139,6 @@ class AppealService(
         return toResponse(appealRepository.save(appeal))
     }
 
-    /**
-     * Переназначить обращение на другого оператора.
-     * Статус остаётся прежним (если уже IN_PROGRESS) либо переходит в IN_PROGRESS.
-     */
     @Transactional
     fun assignOperator(
         id: UUID,
@@ -162,7 +154,6 @@ class AppealService(
 
         appeal.assignedOperatorId = operatorId
 
-        // Если обращение ещё не взято в работу — перевести в IN_PROGRESS
         if (appeal.status == AppealStatus.PENDING_PROCESSING) {
             appeal.status = AppealStatus.IN_PROGRESS
         }
@@ -170,7 +161,6 @@ class AppealService(
         return toResponse(appealRepository.save(appeal))
     }
 
-    /** Явная смена статуса с проверкой допустимости перехода */
     @Transactional
     fun changeStatus(
         id: UUID,
@@ -185,18 +175,12 @@ class AppealService(
         return toResponse(appealRepository.save(appeal))
     }
 
-    /** Пометить обращение как спам */
     @Transactional
     fun markAsSpam(id: UUID): AppealResponse = changeStatus(id, AppealStatus.SPAM)
 
-    /** Закрыть обращение */
     @Transactional
     fun close(id: UUID): AppealResponse = changeStatus(id, AppealStatus.CLOSED)
 
-    /**
-     * Отправить сообщение от оператора клиенту.
-     * Автоматически переводит обращение в WAITING_CLIENT_RESPONSE.
-     */
     @Transactional
     fun sendOperatorMessage(
         id: UUID,
@@ -223,11 +207,6 @@ class AppealService(
         return toMessageResponse(saved)
     }
 
-    /**
-     * Зарегистрировать входящее сообщение от клиента.
-     * Автоматически переводит обращение в IN_PROGRESS.
-     * Используется webhook-обработчиками входящих каналов (email, Telegram и др.).
-     */
     @Transactional
     fun receiveClientMessage(
         id: UUID,
@@ -238,7 +217,6 @@ class AppealService(
         if (request.externalMessageId != null &&
             appealMessageRepository.existsByExternalMessageId(request.externalMessageId)
         ) {
-            // Дедупликация: сообщение уже обработано
             return appealMessageRepository
                 .findByAppealIdOrderByCreatedAtAsc(id, PageRequest.of(0, 1))
                 .content
@@ -280,8 +258,6 @@ class AppealService(
         if (!appealRepository.existsById(id)) throw AppealNotFoundException(id)
         appealRepository.deleteById(id)
     }
-
-    // ── private helpers ──────────────────────────────────────────────────────
 
     private fun findOrThrow(id: UUID): Appeal = appealRepository.findById(id).orElseThrow { AppealNotFoundException(id) }
 

@@ -125,8 +125,6 @@ class AppealController(
         @PathVariable id: UUID,
     ): AppealResponse = appealService.close(id)
 
-    // ── Messages ──────────────────────────────────────────────────────────────
-
     @GetMapping("/{id}/messages")
     @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(summary = "История переписки по обращению (хронологически)")
@@ -148,10 +146,6 @@ class AppealController(
         @AuthenticationPrincipal principal: UserPrincipal,
     ): AppealMessageResponse = appealService.sendOperatorMessage(id, request, principal)
 
-    /**
-     * Внутренний endpoint для webhook-обработчиков входящих каналов (email, Telegram и др.).
-     * В production должен быть защищён отдельно (service account / internal network).
-     */
     @PostMapping("/{id}/messages/inbound")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('APPEAL_WRITE')")

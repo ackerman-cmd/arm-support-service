@@ -5,7 +5,6 @@ import com.base.armsupportservice.domain.appeal.AppealPriority
 import jakarta.validation.constraints.Size
 import java.util.UUID
 
-/** Обновление редактируемых полей обращения (без смены статуса и назначения). */
 data class AppealUpdateRequest(
     @field:Size(max = 512)
     val subject: String? = null,

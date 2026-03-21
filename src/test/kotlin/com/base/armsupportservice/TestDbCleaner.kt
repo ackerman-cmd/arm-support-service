@@ -10,6 +10,14 @@ class TestDbCleaner(
 ) {
     @Transactional
     fun clearAllTables() {
-        jdbc.execute("""DELETE FROM "arm_support"."synced_users"""")
+        jdbc.update("DELETE FROM arm_support.appeal_messages")
+        jdbc.update("DELETE FROM arm_support.appeals")
+        jdbc.update("DELETE FROM arm_support.assignment_group_operators")
+        jdbc.update("DELETE FROM arm_support.skill_group_operators")
+        jdbc.update("DELETE FROM arm_support.skill_group_skills")
+        jdbc.update("DELETE FROM arm_support.assignment_groups")
+        jdbc.update("DELETE FROM arm_support.skill_groups")
+        jdbc.update("DELETE FROM arm_support.organizations")
+        jdbc.update("DELETE FROM arm_support.synced_users")
     }
 }

@@ -38,7 +38,6 @@ class KafkaConsumerConfig(
     fun kafkaListenerContainerFactory(
         consumerFactory: ConsumerFactory<String, String>,
     ): ConcurrentKafkaListenerContainerFactory<String, String> {
-        // Сервис-отправитель кладёт в заголовок __TypeId__ имя типа события; payload всегда UserSyncEvent (JSON).
         val typeMapper =
             DefaultJackson2JavaTypeMapper().apply {
                 typePrecedence = Jackson2JavaTypeMapper.TypePrecedence.TYPE_ID

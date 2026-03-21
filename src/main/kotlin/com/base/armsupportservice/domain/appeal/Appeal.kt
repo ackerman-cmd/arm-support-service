@@ -36,17 +36,12 @@ class Appeal(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organization_id", insertable = false, updatable = false)
     var organization: Organization? = null,
-    /**
-     * FK на Organization — используется для установки связи и фильтрации через Specification.
-     * Обновляется напрямую, organization (proxy) обновляется через него.
-     */
     @Column(name = "organization_id")
     var organizationId: UUID? = null,
     var contactName: String? = null,
     var contactEmail: String? = null,
     @Column(length = 32)
     var contactPhone: String? = null,
-    /** UUID оператора из synced_users, которому назначено обращение */
     var assignedOperatorId: UUID? = null,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assignment_group_id", insertable = false, updatable = false)
@@ -58,7 +53,6 @@ class Appeal(
     var skillGroup: SkillGroup? = null,
     @Column(name = "skill_group_id")
     var skillGroupId: UUID? = null,
-    /** Оператор, создавший обращение */
     val createdById: UUID,
     var closedAt: LocalDateTime? = null,
     @Column(updatable = false)
