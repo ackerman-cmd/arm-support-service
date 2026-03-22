@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: arm-support-service-config
+  namespace: arm-support
+data:
+  # PostgreSQL — Helm (bitnami/postgresql) в namespace infra
+  POSTGRES_HOST: postgres-postgresql.infra.svc.cluster.local
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: user_service
+  POSTGRES_USER: admin
+  POSTGRES_SCHEMA: arm_support
+
+  # Kafka — Helm (bitnami/kafka) в namespace infra
+  KAFKA_BOOTSTRAP_SERVERS: kafka.infra.svc.cluster.local:9092
+
+  # user-service — когда задеплоим в кластер, поменять namespace
+  # Пока user-service не в кластере — используем host.minikube.internal
+  USER_SERVICE_URL: http://host.minikube.internal:8080
+
+  # CORS — origin фронтенда
+  APP_FRONT_URL: http://localhost:3000

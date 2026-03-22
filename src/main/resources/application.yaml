@@ -44,7 +44,24 @@ spring:
         jwt:
           issuer-uri: ${USER_SERVICE_URL:http://localhost:8080}
 
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  endpoints:
+    web:
+      exposure:
+        include: health
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
 app:
+  front-url: ${APP_FRONT_URL:http://localhost:3000}
   kafka:
     topics:
       user-sync: user-sync

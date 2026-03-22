@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arm-support-service
+  namespace: arm-support
+  labels:
+    app: arm-support-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: arm-support-service
+  template:
+    metadata:
+      labels:
+        app: arm-support-service
+    spec:
+      containers:
+        - name: app
+          # Реальный тег подставляется через kustomization.yaml → images
+          image: arm-support-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8082
+              name: http
+          envFrom:
+            - configMapRef:
+                name: arm-support-service-config
+            - secretRef:
+                name: arm-support-service-secrets
+          # HTTP-пробы через Spring Boot Actuator (надёжнее tcpSocket)
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8082
+            initialDelaySeconds: 40
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8082
+            initialDelaySeconds: 90
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 250m
+            limits:
+              memory: 1Gi
+              cpu: "1"

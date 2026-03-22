@@ -1,0 +1,35 @@
+# Стратегия для мультисервисного кластера:
+#
+#  Один NGINX Ingress Controller (cluster-wide) — `minikube addons enable ingress`
+#  Каждый микросервис деплоит СВОЙ Ingress-ресурс в своём namespace.
+#  Роутинг — по имени хоста (subdomain-per-service):
+#
+#    arm-support.api.yourdomain.com  → arm-support-service  (этот файл)
+#    users.api.yourdomain.com        → user-service          (будущий)
+#    notify.api.yourdomain.com       → notification-service  (будущий)
+#
+#  Cloudflare Tunnel проксирует *.api.yourdomain.com → IP Ingress Controller.
+#  Замените `yourdomain.com` на ваш реальный домен.
+#
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: arm-support-service
+  namespace: arm-support
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: arm-support.api.yourdomain.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: arm-support-service
+                port:
+                  number: 80
