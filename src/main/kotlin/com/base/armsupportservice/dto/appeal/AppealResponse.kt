@@ -9,6 +9,7 @@ import com.base.armsupportservice.dto.common.OperatorSummaryResponse
 import com.base.armsupportservice.dto.group.AssignmentGroupSummaryResponse
 import com.base.armsupportservice.dto.group.SkillGroupSummaryResponse
 import com.base.armsupportservice.dto.organization.OrganizationSummaryResponse
+import com.base.armsupportservice.dto.topic.AppealTopicSummaryResponse
 import com.fasterxml.jackson.annotation.JsonFormat
 import java.time.LocalDateTime
 import java.util.UUID
@@ -21,11 +22,15 @@ data class AppealResponse(
     val direction: AppealDirection,
     val status: AppealStatus,
     val priority: AppealPriority,
+    val topic: AppealTopicSummaryResponse?,
     val organization: OrganizationSummaryResponse?,
     val contactName: String?,
     val contactEmail: String?,
     val contactPhone: String?,
+    /** Ответственный оператор (при прямом назначении) */
     val assignedOperator: OperatorSummaryResponse?,
+    /** Все операторы, активно работающие с обращением в данный момент */
+    val activeOperators: List<OperatorSummaryResponse>,
     val assignmentGroup: AssignmentGroupSummaryResponse?,
     val skillGroup: SkillGroupSummaryResponse?,
     val createdById: UUID,
@@ -40,6 +45,7 @@ data class AppealResponse(
         fun from(
             appeal: Appeal,
             assignedOperator: OperatorSummaryResponse?,
+            activeOperators: List<OperatorSummaryResponse> = emptyList(),
         ) = AppealResponse(
             id = appeal.id,
             subject = appeal.subject,
@@ -48,11 +54,13 @@ data class AppealResponse(
             direction = appeal.direction,
             status = appeal.status,
             priority = appeal.priority,
+            topic = appeal.topic?.let { AppealTopicSummaryResponse.from(it) },
             organization = appeal.organization?.let { OrganizationSummaryResponse.from(it) },
             contactName = appeal.contactName,
             contactEmail = appeal.contactEmail,
             contactPhone = appeal.contactPhone,
             assignedOperator = assignedOperator,
+            activeOperators = activeOperators,
             assignmentGroup = appeal.assignmentGroup?.let { AssignmentGroupSummaryResponse.from(it) },
             skillGroup = appeal.skillGroup?.let { SkillGroupSummaryResponse.from(it) },
             createdById = appeal.createdById,

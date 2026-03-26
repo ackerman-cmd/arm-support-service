@@ -53,4 +53,39 @@ class AppealStatusMachineTest {
             AppealStatusMachine.afterClientReply(AppealStatus.WAITING_CLIENT_RESPONSE),
         )
     }
+
+    @Test
+    fun `validate allows all transitions defined in matrix`() {
+        AppealStatusMachine.allowedTransitions.forEach { (from, targets) ->
+            targets.forEach { to -> AppealStatusMachine.validate(from, to) }
+        }
+    }
+
+    @Test
+    fun `validate rejects CLOSED to PENDING_PROCESSING`() {
+        assertThrows<InvalidStatusTransitionException> {
+            AppealStatusMachine.validate(AppealStatus.CLOSED, AppealStatus.PENDING_PROCESSING)
+        }
+    }
+
+    @Test
+    fun `validate rejects SPAM to PENDING_PROCESSING`() {
+        assertThrows<InvalidStatusTransitionException> {
+            AppealStatusMachine.validate(AppealStatus.SPAM, AppealStatus.PENDING_PROCESSING)
+        }
+    }
+
+    @Test
+    fun `allowedTransitions contains entry for every AppealStatus`() {
+        AppealStatus.entries.forEach { status ->
+            assert(AppealStatusMachine.allowedTransitions.containsKey(status)) {
+                "Missing entry for $status in allowedTransitions"
+            }
+        }
+    }
+
+    @Test
+    fun `CLOSED status has no allowed transitions`() {
+        assert(AppealStatusMachine.allowedTransitions[AppealStatus.CLOSED]!!.isEmpty())
+    }
 }

@@ -1,5 +1,6 @@
 package com.base.armsupportservice.controller
 
+import com.base.armsupportservice.dto.appeal.AppealActionsResponse
 import com.base.armsupportservice.dto.appeal.AppealFilterRequest
 import com.base.armsupportservice.dto.appeal.AppealMessageRequest
 import com.base.armsupportservice.dto.appeal.AppealMessageResponse
@@ -8,6 +9,7 @@ import com.base.armsupportservice.dto.appeal.AppealResponse
 import com.base.armsupportservice.dto.appeal.AppealUpdateRequest
 import com.base.armsupportservice.dto.appeal.AssignOperatorRequest
 import com.base.armsupportservice.dto.appeal.ChangeStatusRequest
+import com.base.armsupportservice.dto.common.FetchByIdsRequest
 import com.base.armsupportservice.security.UserPrincipal
 import com.base.armsupportservice.service.AppealService
 import io.swagger.v3.oas.annotations.Operation
@@ -89,11 +91,44 @@ class AppealController(
 
     @PostMapping("/{id}/assign")
     @PreAuthorize("hasAuthority('APPEAL_WRITE')")
-    @Operation(summary = "Переназначить обращение на другого оператора")
-    fun assignOperator(
+    @Operation(
+        summary = "Назначить обращение",
+        description =
+            "Назначить можно одним из трёх вариантов (взаимоисключающих): " +
+                "**operatorId** — прямое назначение на оператора; " +
+                "**assignmentGroupId** — на группу назначения; " +
+                "**skillGroupId** — на скилл-группу. " +
+                "При групповом назначении операторы подключаются через POST /operators/join.",
+    )
+    fun assign(
         @PathVariable id: UUID,
         @Valid @RequestBody request: AssignOperatorRequest,
-    ): AppealResponse = appealService.assignOperator(id, request.operatorId)
+    ): AppealResponse = appealService.assign(id, request)
+
+    @PostMapping("/{id}/operators/join")
+    @PreAuthorize("hasAuthority('APPEAL_WRITE')")
+    @Operation(
+        summary = "Присоединиться к работе над обращением",
+        description =
+            "Добавляет текущего оператора в список activeOperators. " +
+                "Доступно только для обращений, назначенных на группу. " +
+                "Статус переходит в IN_PROGRESS при первом присоединении.",
+    )
+    fun joinWork(
+        @PathVariable id: UUID,
+        @AuthenticationPrincipal principal: UserPrincipal,
+    ): AppealResponse = appealService.joinWork(id, principal)
+
+    @DeleteMapping("/{id}/operators/leave")
+    @PreAuthorize("hasAuthority('APPEAL_WRITE')")
+    @Operation(
+        summary = "Покинуть обращение",
+        description = "Убирает текущего оператора из activeOperators. Статус обращения не меняется.",
+    )
+    fun leaveWork(
+        @PathVariable id: UUID,
+        @AuthenticationPrincipal principal: UserPrincipal,
+    ): AppealResponse = appealService.leaveWork(id, principal)
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAuthority('APPEAL_WRITE')")
@@ -157,6 +192,29 @@ class AppealController(
         @PathVariable id: UUID,
         @Valid @RequestBody request: AppealMessageRequest,
     ): AppealMessageResponse = appealService.receiveClientMessage(id, request)
+
+    @GetMapping("/{id}/actions")
+    @PreAuthorize("hasAuthority('APPEAL_READ')")
+    @Operation(
+        summary = "Доступные действия по обращению для текущего пользователя",
+        description =
+            "Возвращает список действий, которые текущий оператор может выполнить над обращением, " +
+                "а также список допустимых переходов из текущего статуса.",
+    )
+    fun getActions(
+        @PathVariable id: UUID,
+        @AuthenticationPrincipal principal: UserPrincipal,
+    ): AppealActionsResponse = appealService.getActions(id, principal)
+
+    @PostMapping("/fetch")
+    @PreAuthorize("hasAuthority('APPEAL_READ')")
+    @Operation(
+        summary = "Пакетная загрузка обращений по списку ID",
+        description = "Максимум 200 ID за запрос. Порядок ответа не гарантируется.",
+    )
+    fun fetchByIds(
+        @Valid @RequestBody request: FetchByIdsRequest,
+    ): List<AppealResponse> = appealService.fetchByIds(request.ids)
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

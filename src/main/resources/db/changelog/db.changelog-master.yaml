@@ -10,6 +10,8 @@ databaseChangeLog:
   - include:
       file: db/changelog/005-create-appeal-messages.sql
   - include:
-      file: db/changelog/006-seed-bank-support-groups.sql
+      file: db/changelog/006-create-appeal-topics.sql
   - include:
-      file: db/changelog/007-seed-demo-users.sql
+      file: db/changelog/007-add-topic-to-appeals.sql
+  - include:
+      file: db/changelog/008-add-appeal-active-operators.sql

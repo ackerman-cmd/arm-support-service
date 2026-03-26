@@ -8,6 +8,7 @@ import com.base.armsupportservice.domain.appeal.AppealStatus
 import com.base.armsupportservice.domain.user.UserStatus
 import com.base.armsupportservice.dto.appeal.AppealMessageRequest
 import com.base.armsupportservice.dto.appeal.AppealRequest
+import com.base.armsupportservice.dto.appeal.AssignOperatorRequest
 import com.base.armsupportservice.integration.AbstractIntegrationTest
 import com.base.armsupportservice.security.UserPrincipal
 import com.base.armsupportservice.service.AppealService
@@ -48,7 +49,7 @@ class AppealServiceIntegrationTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `assignOperator rejects inactive synced user`() {
+    fun `assign rejects inactive synced user`() {
         val activeAppeal =
             inserter.insertAppeal(
                 createdById = operatorId,
@@ -64,7 +65,7 @@ class AppealServiceIntegrationTest : AbstractIntegrationTest() {
         )
 
         assertFailsWith<IllegalStateException> {
-            appealService.assignOperator(activeAppeal.id, inactiveId)
+            appealService.assign(activeAppeal.id, AssignOperatorRequest(operatorId = inactiveId))
         }
     }
 

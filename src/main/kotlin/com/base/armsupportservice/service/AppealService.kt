@@ -6,12 +6,14 @@ import com.base.armsupportservice.domain.appeal.AppealStatus
 import com.base.armsupportservice.domain.appeal.AppealStatusMachine
 import com.base.armsupportservice.domain.appeal.MessageSenderType
 import com.base.armsupportservice.domain.user.UserStatus
+import com.base.armsupportservice.dto.appeal.AppealActionsResponse
 import com.base.armsupportservice.dto.appeal.AppealFilterRequest
 import com.base.armsupportservice.dto.appeal.AppealMessageRequest
 import com.base.armsupportservice.dto.appeal.AppealMessageResponse
 import com.base.armsupportservice.dto.appeal.AppealRequest
 import com.base.armsupportservice.dto.appeal.AppealResponse
 import com.base.armsupportservice.dto.appeal.AppealUpdateRequest
+import com.base.armsupportservice.dto.appeal.AssignOperatorRequest
 import com.base.armsupportservice.dto.common.OperatorSummaryResponse
 import com.base.armsupportservice.exception.AppealNotFoundException
 import com.base.armsupportservice.exception.GroupNotFoundException
@@ -20,6 +22,7 @@ import com.base.armsupportservice.exception.OrganizationNotFoundException
 import com.base.armsupportservice.repository.AppealMessageRepository
 import com.base.armsupportservice.repository.AppealRepository
 import com.base.armsupportservice.repository.AppealSpecification
+import com.base.armsupportservice.repository.AppealTopicRepository
 import com.base.armsupportservice.repository.AssignmentGroupRepository
 import com.base.armsupportservice.repository.OrganizationRepository
 import com.base.armsupportservice.repository.SkillGroupRepository
@@ -42,6 +45,8 @@ class AppealService(
     private val assignmentGroupRepository: AssignmentGroupRepository,
     private val skillGroupRepository: SkillGroupRepository,
     private val syncedUserRepository: SyncedUserRepository,
+    private val appealTopicRepository: AppealTopicRepository,
+    private val permissionService: PermissionService,
 ) {
     fun getById(id: UUID): AppealResponse {
         val appeal = findOrThrow(id)
@@ -76,6 +81,7 @@ class AppealService(
                 status = initialStatus,
                 priority = request.priority,
                 organizationId = request.organizationId,
+                topicId = request.topicId,
                 contactName = request.contactName,
                 contactEmail = request.contactEmail,
                 contactPhone = request.contactPhone,
@@ -111,6 +117,10 @@ class AppealService(
             }
             appeal.organizationId = request.organizationId
         }
+        if (request.topicId != null) {
+            if (!appealTopicRepository.existsById(request.topicId)) throw GroupNotFoundException(request.topicId)
+            appeal.topicId = request.topicId
+        }
         if (request.assignmentGroupId != null) {
             if (!assignmentGroupRepository.existsById(request.assignmentGroupId)) {
                 throw GroupNotFoundException(request.assignmentGroupId)
@@ -134,30 +144,108 @@ class AppealService(
     ): AppealResponse {
         val appeal = findOrThrow(id)
         AppealStatusMachine.validate(appeal.status, AppealStatus.IN_PROGRESS)
-        appeal.assignedOperatorId = principal.userId
+
+        if (appeal.assignmentGroupId != null || appeal.skillGroupId != null) {
+            // Групповое назначение — оператор присоединяется к активным участникам
+            appeal.activeOperatorIds.add(principal.userId)
+        } else {
+            // Прямое назначение — становится единственным ответственным
+            appeal.assignedOperatorId = principal.userId
+            appeal.activeOperatorIds.clear()
+            appeal.activeOperatorIds.add(principal.userId)
+        }
+
         appeal.status = AppealStatus.IN_PROGRESS
         return toResponse(appealRepository.save(appeal))
     }
 
     @Transactional
-    fun assignOperator(
+    fun assign(
         id: UUID,
-        operatorId: UUID,
+        request: AssignOperatorRequest,
     ): AppealResponse {
         val appeal = findOrThrow(id)
-        val operator =
-            syncedUserRepository.findById(operatorId).orElseThrow { OperatorNotFoundException(operatorId) }
-
-        if (operator.status != UserStatus.ACTIVE) {
-            throw IllegalStateException("Нельзя назначить обращение неактивному оператору: ${operator.status}")
+        if (appeal.status in setOf(AppealStatus.CLOSED, AppealStatus.SPAM)) {
+            throw IllegalStateException("Нельзя переназначить закрытое или помеченное как спам обращение")
         }
 
-        appeal.assignedOperatorId = operatorId
+        when {
+            request.operatorId != null -> {
+                val operator =
+                    syncedUserRepository
+                        .findById(request.operatorId)
+                        .orElseThrow { OperatorNotFoundException(request.operatorId) }
+                if (operator.status != UserStatus.ACTIVE) {
+                    throw IllegalStateException("Нельзя назначить обращение неактивному оператору: ${operator.status}")
+                }
+                appeal.assignedOperatorId = request.operatorId
+                appeal.assignmentGroupId = null
+                appeal.skillGroupId = null
+                if (request.clearActiveOperators) appeal.activeOperatorIds.clear()
+                appeal.activeOperatorIds.add(request.operatorId)
+                if (appeal.status == AppealStatus.PENDING_PROCESSING) appeal.status = AppealStatus.IN_PROGRESS
+            }
 
-        if (appeal.status == AppealStatus.PENDING_PROCESSING) {
+            request.assignmentGroupId != null -> {
+                if (!assignmentGroupRepository.existsById(request.assignmentGroupId)) {
+                    throw GroupNotFoundException(request.assignmentGroupId)
+                }
+                appeal.assignmentGroupId = request.assignmentGroupId
+                appeal.assignedOperatorId = null
+                if (request.clearActiveOperators) appeal.activeOperatorIds.clear()
+            }
+
+            request.skillGroupId != null -> {
+                if (!skillGroupRepository.existsById(request.skillGroupId)) {
+                    throw GroupNotFoundException(request.skillGroupId)
+                }
+                appeal.skillGroupId = request.skillGroupId
+                appeal.assignedOperatorId = null
+                if (request.clearActiveOperators) appeal.activeOperatorIds.clear()
+            }
+        }
+
+        return toResponse(appealRepository.save(appeal))
+    }
+
+    /**
+     * Оператор присоединяется к работе над групповым обращением.
+     * Добавляет его в activeOperators и переводит в IN_PROGRESS если ещё не в работе.
+     */
+    @Transactional
+    fun joinWork(
+        id: UUID,
+        principal: UserPrincipal,
+    ): AppealResponse {
+        val appeal = findOrThrow(id)
+
+        if (appeal.assignmentGroupId == null && appeal.skillGroupId == null) {
+            throw IllegalStateException("Присоединиться можно только к обращению, назначенному на группу")
+        }
+        if (appeal.status in setOf(AppealStatus.CLOSED, AppealStatus.SPAM)) {
+            throw IllegalStateException("Нельзя присоединиться к закрытому обращению")
+        }
+
+        appeal.activeOperatorIds.add(principal.userId)
+
+        if (appeal.status == AppealStatus.PENDING_PROCESSING || appeal.status == AppealStatus.WAITING_CLIENT_RESPONSE) {
             appeal.status = AppealStatus.IN_PROGRESS
         }
 
+        return toResponse(appealRepository.save(appeal))
+    }
+
+    /**
+     * Оператор покидает работу над обращением.
+     * Удаляет его из activeOperators. Статус обращения не меняется.
+     */
+    @Transactional
+    fun leaveWork(
+        id: UUID,
+        principal: UserPrincipal,
+    ): AppealResponse {
+        val appeal = findOrThrow(id)
+        appeal.activeOperatorIds.remove(principal.userId)
         return toResponse(appealRepository.save(appeal))
     }
 
@@ -253,6 +341,31 @@ class AppealService(
             .map { toMessageResponse(it) }
     }
 
+    fun getActions(
+        id: UUID,
+        principal: UserPrincipal,
+    ): AppealActionsResponse {
+        val appeal = findOrThrow(id)
+        val actionItems = permissionService.evaluateActions(appeal, principal)
+        val transitions =
+            (AppealStatusMachine.allowedTransitions[appeal.status] ?: emptySet())
+                .map { s ->
+                    AppealActionsResponse.StatusTransitionItem(
+                        status = s,
+                        label = STATUS_LABELS[s] ?: s.name,
+                    )
+                }
+        return AppealActionsResponse(
+            appealId = appeal.id,
+            currentStatus = appeal.status,
+            currentStatusLabel = STATUS_LABELS[appeal.status] ?: appeal.status.name,
+            actions = actionItems,
+            availableStatusTransitions = transitions,
+        )
+    }
+
+    fun fetchByIds(ids: Set<UUID>): List<AppealResponse> = appealRepository.findAllById(ids).map { toResponse(it) }
+
     @Transactional
     fun delete(id: UUID) {
         if (!appealRepository.existsById(id)) throw AppealNotFoundException(id)
@@ -270,6 +383,9 @@ class AppealService(
         }
         appeal.skillGroupId?.let { groupId ->
             if (!skillGroupRepository.existsById(groupId)) throw GroupNotFoundException(groupId)
+        }
+        appeal.topicId?.let { topicId ->
+            if (!appealTopicRepository.existsById(topicId)) throw GroupNotFoundException(topicId)
         }
         appeal.assignedOperatorId?.let { opId ->
             if (!syncedUserRepository.existsById(opId)) throw OperatorNotFoundException(opId)
@@ -289,8 +405,36 @@ class AppealService(
             }
         }
 
-    private fun toResponse(appeal: Appeal): AppealResponse = AppealResponse.from(appeal, resolveOperator(appeal.assignedOperatorId))
+    private fun toResponse(appeal: Appeal): AppealResponse {
+        val assignedOperator = resolveOperator(appeal.assignedOperatorId)
+        val activeOperators =
+            if (appeal.activeOperatorIds.isEmpty()) {
+                emptyList()
+            } else {
+                syncedUserRepository.findAllById(appeal.activeOperatorIds).map { user ->
+                    OperatorSummaryResponse(
+                        id = user.id,
+                        username = user.username,
+                        email = user.email,
+                        firstName = user.firstName,
+                        lastName = user.lastName,
+                    )
+                }
+            }
+        return AppealResponse.from(appeal, assignedOperator, activeOperators)
+    }
 
     private fun toMessageResponse(message: AppealMessage): AppealMessageResponse =
         AppealMessageResponse.from(message, resolveOperator(message.senderId))
+
+    companion object {
+        val STATUS_LABELS =
+            mapOf(
+                AppealStatus.PENDING_PROCESSING to "Ожидает обработки",
+                AppealStatus.IN_PROGRESS to "В работе",
+                AppealStatus.WAITING_CLIENT_RESPONSE to "Ожидает ответа клиента",
+                AppealStatus.CLOSED to "Закрыто",
+                AppealStatus.SPAM to "Спам",
+            )
+    }
 }

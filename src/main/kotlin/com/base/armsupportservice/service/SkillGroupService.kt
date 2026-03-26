@@ -82,6 +82,8 @@ class SkillGroupService(
         return toResponse(skillGroupRepository.save(group))
     }
 
+    fun fetchByIds(ids: Set<UUID>): List<SkillGroupResponse> = skillGroupRepository.findAllById(ids).map { toResponse(it) }
+
     @Transactional
     fun delete(id: UUID) {
         if (!skillGroupRepository.existsById(id)) throw GroupNotFoundException(id)

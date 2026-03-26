@@ -3,7 +3,7 @@ package com.base.armsupportservice.domain.appeal
 import com.base.armsupportservice.exception.InvalidStatusTransitionException
 
 object AppealStatusMachine {
-    private val allowedTransitions: Map<AppealStatus, Set<AppealStatus>> =
+    val allowedTransitions: Map<AppealStatus, Set<AppealStatus>> =
         mapOf(
             AppealStatus.PENDING_PROCESSING to
                 setOf(

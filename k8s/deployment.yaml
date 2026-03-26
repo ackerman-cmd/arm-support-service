@@ -28,7 +28,6 @@ spec:
                 name: arm-support-service-config
             - secretRef:
                 name: arm-support-service-secrets
-          # HTTP-пробы через Spring Boot Actuator (надёжнее tcpSocket)
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness

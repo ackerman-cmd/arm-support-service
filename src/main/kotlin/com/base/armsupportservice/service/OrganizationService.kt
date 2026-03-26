@@ -69,6 +69,8 @@ class OrganizationService(
         return OrganizationResponse.from(organizationRepository.save(org))
     }
 
+    fun fetchByIds(ids: Set<UUID>): List<OrganizationResponse> = organizationRepository.findAllById(ids).map(OrganizationResponse::from)
+
     @Transactional
     fun delete(id: UUID) {
         if (!organizationRepository.existsById(id)) throw OrganizationNotFoundException(id)

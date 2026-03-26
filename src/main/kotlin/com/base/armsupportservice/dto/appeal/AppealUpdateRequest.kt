@@ -12,6 +12,7 @@ data class AppealUpdateRequest(
     val channel: AppealChannel? = null,
     val priority: AppealPriority? = null,
     val organizationId: UUID? = null,
+    val topicId: UUID? = null,
     val contactName: String? = null,
     val contactEmail: String? = null,
     @field:Size(max = 32)

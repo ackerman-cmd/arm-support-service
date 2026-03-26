@@ -11,17 +11,20 @@ import com.base.armsupportservice.domain.user.UserStatus
 import com.base.armsupportservice.dto.appeal.AppealFilterRequest
 import com.base.armsupportservice.dto.appeal.AppealMessageRequest
 import com.base.armsupportservice.dto.appeal.AppealRequest
+import com.base.armsupportservice.dto.appeal.AssignOperatorRequest
 import com.base.armsupportservice.exception.AppealNotFoundException
 import com.base.armsupportservice.exception.InvalidStatusTransitionException
 import com.base.armsupportservice.exception.OrganizationNotFoundException
 import com.base.armsupportservice.repository.AppealMessageRepository
 import com.base.armsupportservice.repository.AppealRepository
+import com.base.armsupportservice.repository.AppealTopicRepository
 import com.base.armsupportservice.repository.AssignmentGroupRepository
 import com.base.armsupportservice.repository.OrganizationRepository
 import com.base.armsupportservice.repository.SkillGroupRepository
 import com.base.armsupportservice.repository.SyncedUserRepository
 import com.base.armsupportservice.security.UserPrincipal
 import com.base.armsupportservice.service.AppealService
+import com.base.armsupportservice.service.PermissionService
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -45,6 +48,8 @@ class AppealServiceTest {
     private val assignmentGroupRepository: AssignmentGroupRepository = mockk(relaxed = true)
     private val skillGroupRepository: SkillGroupRepository = mockk(relaxed = true)
     private val syncedUserRepository: SyncedUserRepository = mockk(relaxed = true)
+    private val appealTopicRepository: AppealTopicRepository = mockk(relaxed = true)
+    private val permissionService: PermissionService = PermissionService()
 
     private val service =
         AppealService(
@@ -54,6 +59,8 @@ class AppealServiceTest {
             assignmentGroupRepository,
             skillGroupRepository,
             syncedUserRepository,
+            appealTopicRepository,
+            permissionService,
         )
 
     private val userId: UUID = UUID.randomUUID()
@@ -149,7 +156,7 @@ class AppealServiceTest {
     }
 
     @Test
-    fun `assignOperator throws when operator inactive`() {
+    fun `assign throws when operator inactive`() {
         val appeal = inboundAppeal(status = AppealStatus.IN_PROGRESS)
         val opId = UUID.randomUUID()
         val user =
@@ -165,7 +172,7 @@ class AppealServiceTest {
         every { syncedUserRepository.findById(opId) } returns Optional.of(user)
 
         assertFailsWith<IllegalStateException> {
-            service.assignOperator(appeal.id, opId)
+            service.assign(appeal.id, AssignOperatorRequest(operatorId = opId))
         }
     }
 

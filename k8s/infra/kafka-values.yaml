@@ -5,8 +5,8 @@ global:
 
 image:
   registry: docker.io
-  repository: confluentinc/cp-kafka
-  tag: "7.8.0"
+  repository: bitnami/kafka
+  tag: "3.5"
   pullPolicy: IfNotPresent
 
 controller:

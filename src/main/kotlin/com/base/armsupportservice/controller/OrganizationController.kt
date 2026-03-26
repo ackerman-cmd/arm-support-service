@@ -1,5 +1,6 @@
 package com.base.armsupportservice.controller
 
+import com.base.armsupportservice.dto.common.FetchByIdsRequest
 import com.base.armsupportservice.dto.organization.OrganizationRequest
 import com.base.armsupportservice.dto.organization.OrganizationResponse
 import com.base.armsupportservice.service.OrganizationService
@@ -67,6 +68,13 @@ class OrganizationController(
         @PathVariable id: UUID,
         @Valid @RequestBody request: OrganizationRequest,
     ): OrganizationResponse = organizationService.update(id, request)
+
+    @PostMapping("/fetch")
+    @PreAuthorize("hasAuthority('APPEAL_READ')")
+    @Operation(summary = "Пакетная загрузка организаций по списку ID")
+    fun fetchByIds(
+        @Valid @RequestBody request: FetchByIdsRequest,
+    ): List<OrganizationResponse> = organizationService.fetchByIds(request.ids)
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

@@ -79,6 +79,8 @@ class AssignmentGroupService(
         return toResponse(assignmentGroupRepository.save(group))
     }
 
+    fun fetchByIds(ids: Set<UUID>): List<AssignmentGroupResponse> = assignmentGroupRepository.findAllById(ids).map { toResponse(it) }
+
     @Transactional
     fun delete(id: UUID) {
         if (!assignmentGroupRepository.existsById(id)) throw GroupNotFoundException(id)

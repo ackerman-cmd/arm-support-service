@@ -1,5 +1,6 @@
 package com.base.armsupportservice.controller
 
+import com.base.armsupportservice.dto.common.FetchByIdsRequest
 import com.base.armsupportservice.dto.group.GroupOperatorsRequest
 import com.base.armsupportservice.dto.group.SkillGroupRequest
 import com.base.armsupportservice.dto.group.SkillGroupResponse
@@ -75,6 +76,13 @@ class SkillGroupController(
         @PathVariable id: UUID,
         @PathVariable operatorId: UUID,
     ): SkillGroupResponse = skillGroupService.removeOperator(id, operatorId)
+
+    @PostMapping("/fetch")
+    @PreAuthorize("hasAuthority('APPEAL_READ')")
+    @Operation(summary = "Пакетная загрузка скилл-групп по списку ID")
+    fun fetchByIds(
+        @Valid @RequestBody request: FetchByIdsRequest,
+    ): List<SkillGroupResponse> = skillGroupService.fetchByIds(request.ids)
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

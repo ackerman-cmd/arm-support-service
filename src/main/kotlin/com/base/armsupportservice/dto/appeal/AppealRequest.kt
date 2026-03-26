@@ -19,6 +19,7 @@ data class AppealRequest(
     val direction: AppealDirection,
     val priority: AppealPriority = AppealPriority.MEDIUM,
     val organizationId: UUID? = null,
+    val topicId: UUID? = null,
     val contactName: String? = null,
     val contactEmail: String? = null,
     @field:Size(max = 32)

@@ -1,5 +1,6 @@
 package com.base.armsupportservice.controller
 
+import com.base.armsupportservice.dto.common.FetchByIdsRequest
 import com.base.armsupportservice.dto.group.AssignmentGroupRequest
 import com.base.armsupportservice.dto.group.AssignmentGroupResponse
 import com.base.armsupportservice.dto.group.GroupOperatorsRequest
@@ -75,6 +76,13 @@ class AssignmentGroupController(
         @PathVariable id: UUID,
         @PathVariable operatorId: UUID,
     ): AssignmentGroupResponse = assignmentGroupService.removeOperator(id, operatorId)
+
+    @PostMapping("/fetch")
+    @PreAuthorize("hasAuthority('APPEAL_READ')")
+    @Operation(summary = "Пакетная загрузка групп назначения по списку ID")
+    fun fetchByIds(
+        @Valid @RequestBody request: FetchByIdsRequest,
+    ): List<AssignmentGroupResponse> = assignmentGroupService.fetchByIds(request.ids)
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
