@@ -6,8 +6,10 @@ import com.base.armsupportservice.exception.DuplicateResourceException
 import com.base.armsupportservice.exception.GroupNotFoundException
 import com.base.armsupportservice.exception.OperatorNotFoundException
 import com.base.armsupportservice.repository.AssignmentGroupRepository
+import com.base.armsupportservice.repository.SkillGroupRepository
 import com.base.armsupportservice.repository.SyncedUserRepository
 import com.base.armsupportservice.service.AssignmentGroupService
+import com.base.armsupportservice.service.GroupMailboxValidator
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Test
@@ -18,8 +20,14 @@ import kotlin.test.assertFailsWith
 
 class AssignmentGroupServiceTest {
     private val assignmentGroupRepository: AssignmentGroupRepository = mockk(relaxed = true)
+    private val skillGroupRepository: SkillGroupRepository = mockk(relaxed = true)
     private val syncedUserRepository: SyncedUserRepository = mockk(relaxed = true)
-    private val service = AssignmentGroupService(assignmentGroupRepository, syncedUserRepository)
+    private val service =
+        AssignmentGroupService(
+            assignmentGroupRepository,
+            syncedUserRepository,
+            GroupMailboxValidator(assignmentGroupRepository, skillGroupRepository),
+        )
 
     @Test
     fun `create throws when name duplicate`() {

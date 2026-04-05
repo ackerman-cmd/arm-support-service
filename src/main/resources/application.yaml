@@ -65,3 +65,12 @@ app:
   kafka:
     topics:
       user-sync: user-sync
+      email-conversation-created: email.conversation.created
+      email-conversation-matched: email.conversation.matched
+      email-inbound-persisted: email.inbound.persisted
+      email-outbound-requested: email.outbound.requested
+      email-outbound-sent: email.outbound.sent
+      email-outbound-failed: email.outbound.failed
+  email-integration:
+    base-url: ${EMAIL_INTEGRATION_URL:http://localhost:8084}
+    kafka-consumers-enabled: true

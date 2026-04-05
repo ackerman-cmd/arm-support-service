@@ -8,7 +8,6 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
-import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -28,22 +27,18 @@ class AppealTopicController(
     private val topicService: AppealTopicService,
 ) {
     @GetMapping
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(summary = "Все тематики (включая неактивные) — для администратора")
     fun getAll(): List<AppealTopicResponse> = topicService.getAll()
 
     @GetMapping("/active")
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(summary = "Только активные тематики")
     fun getAllActive(): List<AppealTopicResponse> = topicService.getAllActive()
 
     @GetMapping("/grouped")
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(summary = "Активные тематики, сгруппированные по категории — для dropdown")
     fun getGrouped(): List<AppealTopicsByCategoryResponse> = topicService.getGroupedByCategory()
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(summary = "Тематика по ID")
     fun getById(
         @PathVariable id: UUID,
@@ -51,14 +46,12 @@ class AppealTopicController(
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('ADMIN_ACCESS')")
     @Operation(summary = "Создать тематику")
     fun create(
         @Valid @RequestBody request: AppealTopicRequest,
     ): AppealTopicResponse = topicService.create(request)
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN_ACCESS')")
     @Operation(summary = "Обновить тематику")
     fun update(
         @PathVariable id: UUID,
@@ -66,7 +59,6 @@ class AppealTopicController(
     ): AppealTopicResponse = topicService.update(id, request)
 
     @PatchMapping("/{id}/active")
-    @PreAuthorize("hasAuthority('ADMIN_ACCESS')")
     @Operation(summary = "Активировать / деактивировать тематику")
     fun setActive(
         @PathVariable id: UUID,

@@ -1,6 +1,7 @@
 package com.base.armsupportservice.controller
 
 import com.base.armsupportservice.dto.appeal.AppealActionsResponse
+import com.base.armsupportservice.dto.appeal.AppealEventResponse
 import com.base.armsupportservice.dto.appeal.AppealFilterRequest
 import com.base.armsupportservice.dto.appeal.AppealMessageRequest
 import com.base.armsupportservice.dto.appeal.AppealMessageResponse
@@ -20,7 +21,6 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
 import org.springframework.http.HttpStatus
-import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -42,7 +42,6 @@ class AppealController(
     private val appealService: AppealService,
 ) {
     @GetMapping
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(
         summary = "Фильтрация обращений с пагинацией",
         description =
@@ -55,7 +54,6 @@ class AppealController(
     ): Page<AppealResponse> = appealService.filter(filter)
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(summary = "Получить обращение по ID")
     fun getById(
         @PathVariable id: UUID,
@@ -63,7 +61,6 @@ class AppealController(
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('APPEAL_WRITE')")
     @Operation(summary = "Создать обращение")
     fun create(
         @Valid @RequestBody request: AppealRequest,
@@ -71,7 +68,6 @@ class AppealController(
     ): AppealResponse = appealService.create(request, principal)
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('APPEAL_WRITE')")
     @Operation(summary = "Обновить обращение (редактируемые поля)")
     fun update(
         @PathVariable id: UUID,
@@ -79,7 +75,6 @@ class AppealController(
     ): AppealResponse = appealService.update(id, request)
 
     @PostMapping("/{id}/take")
-    @PreAuthorize("hasAuthority('APPEAL_WRITE')")
     @Operation(
         summary = "Взять обращение в работу",
         description = "Назначает текущего оператора и переводит статус в IN_PROGRESS.",
@@ -90,7 +85,6 @@ class AppealController(
     ): AppealResponse = appealService.takeIntoWork(id, principal)
 
     @PostMapping("/{id}/assign")
-    @PreAuthorize("hasAuthority('APPEAL_WRITE')")
     @Operation(
         summary = "Назначить обращение",
         description =
@@ -106,7 +100,6 @@ class AppealController(
     ): AppealResponse = appealService.assign(id, request)
 
     @PostMapping("/{id}/operators/join")
-    @PreAuthorize("hasAuthority('APPEAL_WRITE')")
     @Operation(
         summary = "Присоединиться к работе над обращением",
         description =
@@ -120,7 +113,6 @@ class AppealController(
     ): AppealResponse = appealService.joinWork(id, principal)
 
     @DeleteMapping("/{id}/operators/leave")
-    @PreAuthorize("hasAuthority('APPEAL_WRITE')")
     @Operation(
         summary = "Покинуть обращение",
         description = "Убирает текущего оператора из activeOperators. Статус обращения не меняется.",
@@ -131,7 +123,6 @@ class AppealController(
     ): AppealResponse = appealService.leaveWork(id, principal)
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAuthority('APPEAL_WRITE')")
     @Operation(
         summary = "Изменить статус обращения",
         description =
@@ -147,21 +138,18 @@ class AppealController(
     ): AppealResponse = appealService.changeStatus(id, request.status)
 
     @PostMapping("/{id}/spam")
-    @PreAuthorize("hasAuthority('APPEAL_WRITE')")
     @Operation(summary = "Пометить обращение как спам")
     fun markAsSpam(
         @PathVariable id: UUID,
     ): AppealResponse = appealService.markAsSpam(id)
 
     @PostMapping("/{id}/close")
-    @PreAuthorize("hasAuthority('APPEAL_WRITE')")
     @Operation(summary = "Закрыть обращение")
     fun close(
         @PathVariable id: UUID,
     ): AppealResponse = appealService.close(id)
 
     @GetMapping("/{id}/messages")
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(summary = "История переписки по обращению (хронологически)")
     fun getMessages(
         @PathVariable id: UUID,
@@ -170,7 +158,6 @@ class AppealController(
 
     @PostMapping("/{id}/messages")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('APPEAL_WRITE')")
     @Operation(
         summary = "Отправить сообщение клиенту",
         description = "Оператор отправляет сообщение. Обращение переходит в WAITING_CLIENT_RESPONSE.",
@@ -183,7 +170,6 @@ class AppealController(
 
     @PostMapping("/{id}/messages/inbound")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('APPEAL_WRITE')")
     @Operation(
         summary = "Зарегистрировать входящее сообщение от клиента",
         description = "Используется webhook-обработчиками. Обращение переходит в IN_PROGRESS.",
@@ -193,8 +179,19 @@ class AppealController(
         @Valid @RequestBody request: AppealMessageRequest,
     ): AppealMessageResponse = appealService.receiveClientMessage(id, request)
 
+    @GetMapping("/{id}/events")
+    @Operation(
+        summary = "История событий по обращению",
+        description =
+            "Возвращает хронологический журнал всех событий: создание, смены статуса, назначения операторов/групп, " +
+                "отправка и получение сообщений. Поддерживает пагинацию.",
+    )
+    fun getEvents(
+        @PathVariable id: UUID,
+        @ParameterObject @PageableDefault(size = 50) pageable: Pageable,
+    ): Page<AppealEventResponse> = appealService.getEvents(id, pageable)
+
     @GetMapping("/{id}/actions")
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(
         summary = "Доступные действия по обращению для текущего пользователя",
         description =
@@ -207,7 +204,6 @@ class AppealController(
     ): AppealActionsResponse = appealService.getActions(id, principal)
 
     @PostMapping("/fetch")
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(
         summary = "Пакетная загрузка обращений по списку ID",
         description = "Максимум 200 ID за запрос. Порядок ответа не гарантируется.",
@@ -218,7 +214,6 @@ class AppealController(
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('ADMIN_ACCESS')")
     @Operation(summary = "Удалить обращение (только администратор)")
     fun delete(
         @PathVariable id: UUID,

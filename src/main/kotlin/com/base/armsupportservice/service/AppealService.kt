@@ -1,12 +1,15 @@
 package com.base.armsupportservice.service
 
 import com.base.armsupportservice.domain.appeal.Appeal
+import com.base.armsupportservice.domain.appeal.AppealEvent
+import com.base.armsupportservice.domain.appeal.AppealEventType
 import com.base.armsupportservice.domain.appeal.AppealMessage
 import com.base.armsupportservice.domain.appeal.AppealStatus
 import com.base.armsupportservice.domain.appeal.AppealStatusMachine
 import com.base.armsupportservice.domain.appeal.MessageSenderType
 import com.base.armsupportservice.domain.user.UserStatus
 import com.base.armsupportservice.dto.appeal.AppealActionsResponse
+import com.base.armsupportservice.dto.appeal.AppealEventResponse
 import com.base.armsupportservice.dto.appeal.AppealFilterRequest
 import com.base.armsupportservice.dto.appeal.AppealMessageRequest
 import com.base.armsupportservice.dto.appeal.AppealMessageResponse
@@ -19,6 +22,7 @@ import com.base.armsupportservice.exception.AppealNotFoundException
 import com.base.armsupportservice.exception.GroupNotFoundException
 import com.base.armsupportservice.exception.OperatorNotFoundException
 import com.base.armsupportservice.exception.OrganizationNotFoundException
+import com.base.armsupportservice.repository.AppealEventRepository
 import com.base.armsupportservice.repository.AppealMessageRepository
 import com.base.armsupportservice.repository.AppealRepository
 import com.base.armsupportservice.repository.AppealSpecification
@@ -41,6 +45,7 @@ import java.util.UUID
 class AppealService(
     private val appealRepository: AppealRepository,
     private val appealMessageRepository: AppealMessageRepository,
+    private val appealEventRepository: AppealEventRepository,
     private val organizationRepository: OrganizationRepository,
     private val assignmentGroupRepository: AssignmentGroupRepository,
     private val skillGroupRepository: SkillGroupRepository,
@@ -93,7 +98,16 @@ class AppealService(
 
         validateReferences(appeal)
 
-        return toResponse(appealRepository.save(appeal))
+        val saved = appealRepository.save(appeal)
+        appealEventRepository.save(
+            AppealEvent(
+                appeal = saved,
+                eventType = AppealEventType.CREATED,
+                initiatorId = principal.userId,
+                toStatus = initialStatus,
+            ),
+        )
+        return toResponse(saved)
     }
 
     @Transactional
@@ -134,7 +148,14 @@ class AppealService(
             appeal.skillGroupId = request.skillGroupId
         }
 
-        return toResponse(appealRepository.save(appeal))
+        val saved = appealRepository.save(appeal)
+        appealEventRepository.save(
+            AppealEvent(
+                appeal = saved,
+                eventType = AppealEventType.UPDATED,
+            ),
+        )
+        return toResponse(saved)
     }
 
     @Transactional
@@ -155,8 +176,19 @@ class AppealService(
             appeal.activeOperatorIds.add(principal.userId)
         }
 
+        val prevStatus = appeal.status
         appeal.status = AppealStatus.IN_PROGRESS
-        return toResponse(appealRepository.save(appeal))
+        val saved = appealRepository.save(appeal)
+        appealEventRepository.save(
+            AppealEvent(
+                appeal = saved,
+                eventType = AppealEventType.STATUS_CHANGED,
+                initiatorId = principal.userId,
+                fromStatus = prevStatus,
+                toStatus = AppealStatus.IN_PROGRESS,
+            ),
+        )
+        return toResponse(saved)
     }
 
     @Transactional
@@ -168,6 +200,9 @@ class AppealService(
         if (appeal.status in setOf(AppealStatus.CLOSED, AppealStatus.SPAM)) {
             throw IllegalStateException("Нельзя переназначить закрытое или помеченное как спам обращение")
         }
+
+        var assignEventType = AppealEventType.ASSIGNED_OPERATOR
+        var assignComment: String? = null
 
         when {
             request.operatorId != null -> {
@@ -184,28 +219,44 @@ class AppealService(
                 if (request.clearActiveOperators) appeal.activeOperatorIds.clear()
                 appeal.activeOperatorIds.add(request.operatorId)
                 if (appeal.status == AppealStatus.PENDING_PROCESSING) appeal.status = AppealStatus.IN_PROGRESS
+                assignEventType = AppealEventType.ASSIGNED_OPERATOR
+                assignComment = listOfNotNull(operator.firstName, operator.lastName).joinToString(" ").ifBlank { operator.username }
             }
 
             request.assignmentGroupId != null -> {
-                if (!assignmentGroupRepository.existsById(request.assignmentGroupId)) {
-                    throw GroupNotFoundException(request.assignmentGroupId)
-                }
+                val group =
+                    assignmentGroupRepository
+                        .findById(request.assignmentGroupId)
+                        .orElseThrow { GroupNotFoundException(request.assignmentGroupId) }
                 appeal.assignmentGroupId = request.assignmentGroupId
                 appeal.assignedOperatorId = null
                 if (request.clearActiveOperators) appeal.activeOperatorIds.clear()
+                assignEventType = AppealEventType.ASSIGNED_GROUP
+                assignComment = group.name
             }
 
             request.skillGroupId != null -> {
-                if (!skillGroupRepository.existsById(request.skillGroupId)) {
-                    throw GroupNotFoundException(request.skillGroupId)
-                }
+                val group =
+                    skillGroupRepository
+                        .findById(request.skillGroupId)
+                        .orElseThrow { GroupNotFoundException(request.skillGroupId) }
                 appeal.skillGroupId = request.skillGroupId
                 appeal.assignedOperatorId = null
                 if (request.clearActiveOperators) appeal.activeOperatorIds.clear()
+                assignEventType = AppealEventType.ASSIGNED_GROUP
+                assignComment = group.name
             }
         }
 
-        return toResponse(appealRepository.save(appeal))
+        val saved = appealRepository.save(appeal)
+        appealEventRepository.save(
+            AppealEvent(
+                appeal = saved,
+                eventType = assignEventType,
+                comment = assignComment,
+            ),
+        )
+        return toResponse(saved)
     }
 
     /**
@@ -228,11 +279,22 @@ class AppealService(
 
         appeal.activeOperatorIds.add(principal.userId)
 
+        val prevStatus = appeal.status
         if (appeal.status == AppealStatus.PENDING_PROCESSING || appeal.status == AppealStatus.WAITING_CLIENT_RESPONSE) {
             appeal.status = AppealStatus.IN_PROGRESS
         }
 
-        return toResponse(appealRepository.save(appeal))
+        val saved = appealRepository.save(appeal)
+        appealEventRepository.save(
+            AppealEvent(
+                appeal = saved,
+                eventType = AppealEventType.OPERATOR_JOINED,
+                initiatorId = principal.userId,
+                fromStatus = if (prevStatus != saved.status) prevStatus else null,
+                toStatus = if (prevStatus != saved.status) saved.status else null,
+            ),
+        )
+        return toResponse(saved)
     }
 
     /**
@@ -246,21 +308,41 @@ class AppealService(
     ): AppealResponse {
         val appeal = findOrThrow(id)
         appeal.activeOperatorIds.remove(principal.userId)
-        return toResponse(appealRepository.save(appeal))
+        val saved = appealRepository.save(appeal)
+        appealEventRepository.save(
+            AppealEvent(
+                appeal = saved,
+                eventType = AppealEventType.OPERATOR_LEFT,
+                initiatorId = principal.userId,
+            ),
+        )
+        return toResponse(saved)
     }
 
     @Transactional
     fun changeStatus(
         id: UUID,
         newStatus: AppealStatus,
+        initiatorId: UUID? = null,
     ): AppealResponse {
         val appeal = findOrThrow(id)
-        AppealStatusMachine.validate(appeal.status, newStatus)
+        val prevStatus = appeal.status
+        AppealStatusMachine.validate(prevStatus, newStatus)
         appeal.status = newStatus
         if (newStatus == AppealStatus.CLOSED) {
             appeal.closedAt = LocalDateTime.now()
         }
-        return toResponse(appealRepository.save(appeal))
+        val saved = appealRepository.save(appeal)
+        appealEventRepository.save(
+            AppealEvent(
+                appeal = saved,
+                eventType = AppealEventType.STATUS_CHANGED,
+                initiatorId = initiatorId,
+                fromStatus = prevStatus,
+                toStatus = newStatus,
+            ),
+        )
+        return toResponse(saved)
     }
 
     @Transactional
@@ -277,6 +359,7 @@ class AppealService(
     ): AppealMessageResponse {
         val appeal = findOrThrow(id)
 
+        val prevStatus = appeal.status
         val nextStatus = AppealStatusMachine.afterOperatorReply(appeal.status)
         appeal.status = nextStatus
 
@@ -290,8 +373,17 @@ class AppealService(
                 externalMessageId = request.externalMessageId,
             )
 
-        appealRepository.save(appeal)
+        val savedAppeal = appealRepository.save(appeal)
         val saved = appealMessageRepository.save(message)
+        appealEventRepository.save(
+            AppealEvent(
+                appeal = savedAppeal,
+                eventType = AppealEventType.MESSAGE_SENT,
+                initiatorId = principal.userId,
+                fromStatus = if (prevStatus != nextStatus) prevStatus else null,
+                toStatus = if (prevStatus != nextStatus) nextStatus else null,
+            ),
+        )
         return toMessageResponse(saved)
     }
 
@@ -313,6 +405,7 @@ class AppealService(
                 ?: error("Дедупликация: сообщение найдено, но список пуст")
         }
 
+        val prevStatus = appeal.status
         val nextStatus = AppealStatusMachine.afterClientReply(appeal.status)
         appeal.status = nextStatus
 
@@ -326,8 +419,16 @@ class AppealService(
                 externalMessageId = request.externalMessageId,
             )
 
-        appealRepository.save(appeal)
+        val savedAppeal = appealRepository.save(appeal)
         val saved = appealMessageRepository.save(message)
+        appealEventRepository.save(
+            AppealEvent(
+                appeal = savedAppeal,
+                eventType = AppealEventType.MESSAGE_RECEIVED,
+                fromStatus = if (prevStatus != nextStatus) prevStatus else null,
+                toStatus = if (prevStatus != nextStatus) nextStatus else null,
+            ),
+        )
         return toMessageResponse(saved)
     }
 
@@ -365,6 +466,16 @@ class AppealService(
     }
 
     fun fetchByIds(ids: Set<UUID>): List<AppealResponse> = appealRepository.findAllById(ids).map { toResponse(it) }
+
+    fun getEvents(
+        id: UUID,
+        pageable: org.springframework.data.domain.Pageable,
+    ): Page<AppealEventResponse> {
+        if (!appealRepository.existsById(id)) throw AppealNotFoundException(id)
+        return appealEventRepository
+            .findByAppealIdOrderByCreatedAtAsc(id, pageable)
+            .map { event -> AppealEventResponse.from(event, resolveOperator(event.initiatorId), STATUS_LABELS) }
+    }
 
     @Transactional
     fun delete(id: UUID) {

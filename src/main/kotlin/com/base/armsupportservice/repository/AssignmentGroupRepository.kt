@@ -15,4 +15,6 @@ interface AssignmentGroupRepository : JpaRepository<AssignmentGroup, UUID> {
 
     @Query("SELECT g FROM AssignmentGroup g WHERE :operatorId MEMBER OF g.operatorIds")
     fun findAllByOperatorId(operatorId: UUID): List<AssignmentGroup>
+
+    fun findByMailboxEmail(mailboxEmail: String): AssignmentGroup?
 }

@@ -15,7 +15,6 @@ import com.base.armsupportservice.service.AppealTopicService
 import com.base.armsupportservice.service.GroupReferenceService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
-import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
@@ -31,7 +30,6 @@ class ReferenceController(
     private val groupReferenceService: GroupReferenceService,
 ) {
     @GetMapping("/appeal-statuses")
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(summary = "Список статусов обращений с метками")
     fun appealStatuses(): List<ReferenceItemResponse> =
         AppealStatus.entries.map {
@@ -43,7 +41,6 @@ class ReferenceController(
         }
 
     @GetMapping("/appeal-channels")
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(summary = "Список каналов обращений")
     fun appealChannels(): List<ReferenceItemResponse> =
         AppealChannel.entries.map {
@@ -54,7 +51,6 @@ class ReferenceController(
         }
 
     @GetMapping("/appeal-directions")
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(summary = "Список направлений обращений")
     fun appealDirections(): List<ReferenceItemResponse> =
         AppealDirection.entries.map {
@@ -65,7 +61,6 @@ class ReferenceController(
         }
 
     @GetMapping("/appeal-priorities")
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(summary = "Список приоритетов обращений")
     fun appealPriorities(): List<ReferenceItemResponse> =
         AppealPriority.entries.map {
@@ -76,7 +71,6 @@ class ReferenceController(
         }
 
     @GetMapping("/appeal-actions")
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(summary = "Список всех действий над обращениями с описаниями")
     fun appealActions(): List<ReferenceItemResponse> =
         AppealAction.entries.map {
@@ -84,7 +78,6 @@ class ReferenceController(
         }
 
     @GetMapping("/appeal-topic-categories")
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(summary = "Список категорий тематик")
     fun topicCategories(): List<ReferenceItemResponse> =
         AppealTopicCategory.entries.map {
@@ -92,12 +85,10 @@ class ReferenceController(
         }
 
     @GetMapping("/appeal-topics")
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(summary = "Активные тематики, сгруппированные по категории — для dropdown при создании/редактировании обращения")
     fun topicsGrouped(): List<AppealTopicsByCategoryResponse> = topicService.getGroupedByCategory()
 
     @GetMapping("/status-transitions")
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(
         summary = "Матрица допустимых переходов между статусами",
         description =
@@ -118,7 +109,6 @@ class ReferenceController(
         )
 
     @GetMapping("/groups-with-operators")
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(
         summary = "Получить все группы (назначения и скилл) с их операторами",
         description = "Используется для выбора оператора и группы при назначении обращения на фронтенде.",

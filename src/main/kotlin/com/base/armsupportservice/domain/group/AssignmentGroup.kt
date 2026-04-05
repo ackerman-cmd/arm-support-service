@@ -21,6 +21,8 @@ class AssignmentGroup(
     var name: String,
     @Column(columnDefinition = "TEXT")
     var description: String? = null,
+    @Column(name = "mailbox_email", length = 320)
+    var mailboxEmail: String? = null,
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
         name = "assignment_group_operators",

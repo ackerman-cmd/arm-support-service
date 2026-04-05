@@ -41,7 +41,7 @@ class SkillGroupApiIntegrationTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `POST skill-group without admin returns 403`() {
+    fun `POST skill-group succeeds for operator`() {
         mockMvc
             .perform(
                 post("/api/v1/skill-groups")
@@ -52,7 +52,8 @@ class SkillGroupApiIntegrationTest : AbstractIntegrationTest() {
                             SkillGroupRequest(name = "S"),
                         ),
                     ),
-            ).andExpect(status().isForbidden)
+            ).andExpect(status().isCreated)
+            .andExpect(jsonPath("$.name").value("S"))
     }
 
     @Test

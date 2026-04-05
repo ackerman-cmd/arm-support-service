@@ -76,6 +76,8 @@ class Appeal(
     @Column(name = "operator_id")
     val activeOperatorIds: MutableSet<UUID> = mutableSetOf(),
     val createdById: UUID,
+    @Column(name = "email_conversation_id")
+    var emailConversationId: UUID? = null,
     var closedAt: LocalDateTime? = null,
     @Column(updatable = false)
     val createdAt: LocalDateTime = LocalDateTime.now(),

@@ -11,7 +11,18 @@ import org.testcontainers.containers.PostgreSQLContainer
 @SpringBootTest
 @ActiveProfiles("test")
 @TestMethodOrder(MethodOrderer.MethodName::class)
-@EmbeddedKafka(partitions = 1, topics = ["user-sync-test"])
+@EmbeddedKafka(
+    partitions = 1,
+    topics = [
+        "user-sync-test",
+        "email.conversation.created.test",
+        "email.conversation.matched.test",
+        "email.inbound.persisted.test",
+        "email.outbound.requested.test",
+        "email.outbound.sent.test",
+        "email.outbound.failed.test",
+    ],
+)
 abstract class AbstractIntegrationTest {
     companion object {
         @ServiceConnection

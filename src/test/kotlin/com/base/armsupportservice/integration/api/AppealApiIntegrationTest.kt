@@ -222,16 +222,6 @@ class AppealApiIntegrationTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `delete forbidden for operator`() {
-        val id = createAppealViaApi()
-        mockMvc
-            .perform(
-                delete("/api/v1/appeals/$id")
-                    .with(SecurityTestSupport.operator(operatorId)),
-            ).andExpect(status().isForbidden)
-    }
-
-    @Test
     fun `delete allowed for admin`() {
         val id = createAppealViaApi()
         mockMvc

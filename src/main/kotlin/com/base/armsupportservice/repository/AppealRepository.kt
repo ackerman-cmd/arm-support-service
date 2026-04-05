@@ -9,6 +9,8 @@ import java.util.UUID
 interface AppealRepository :
     JpaRepository<Appeal, UUID>,
     JpaSpecificationExecutor<Appeal> {
+    fun findByEmailConversationId(emailConversationId: UUID): Appeal?
+
     fun countByAssignedOperatorIdAndStatusIn(
         operatorId: UUID,
         statuses: Collection<AppealStatus>,

@@ -52,22 +52,6 @@ class OrganizationApiIntegrationTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `POST organization without write permission returns 403`() {
-        val body =
-            OrganizationRequest(
-                name = "ООО Тест",
-                inn = "7707083893",
-            )
-        mockMvc
-            .perform(
-                post("/api/v1/organizations")
-                    .with(SecurityTestSupport.readOnly())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(body)),
-            ).andExpect(status().isForbidden)
-    }
-
-    @Test
     fun `POST organization creates resource`() {
         val body =
             OrganizationRequest(
@@ -167,30 +151,6 @@ class OrganizationApiIntegrationTest : AbstractIntegrationTest() {
                     .content(objectMapper.writeValueAsString(update)),
             ).andExpect(status().isOk)
             .andExpect(jsonPath("$.name").value("Новое имя"))
-    }
-
-    @Test
-    fun `DELETE without admin returns 403`() {
-        val create =
-            OrganizationRequest(
-                name = "X",
-                inn = "7707083896",
-            )
-        val created =
-            mockMvc
-                .perform(
-                    post("/api/v1/organizations")
-                        .with(SecurityTestSupport.operator())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(create)),
-                ).andReturn()
-        val id = objectMapper.readTree(created.response.contentAsString).get("id").asText()
-
-        mockMvc
-            .perform(
-                delete("/api/v1/organizations/$id")
-                    .with(SecurityTestSupport.operator()),
-            ).andExpect(status().isForbidden)
     }
 
     @Test

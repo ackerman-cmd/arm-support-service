@@ -19,6 +19,7 @@ import java.util.UUID
 class AssignmentGroupService(
     private val assignmentGroupRepository: AssignmentGroupRepository,
     private val syncedUserRepository: SyncedUserRepository,
+    private val groupMailboxValidator: GroupMailboxValidator,
 ) {
     fun getById(id: UUID): AssignmentGroupResponse {
         val group = assignmentGroupRepository.findById(id).orElseThrow { GroupNotFoundException(id) }
@@ -32,11 +33,13 @@ class AssignmentGroupService(
         if (assignmentGroupRepository.existsByName(request.name)) {
             throw DuplicateResourceException("Группа назначения '${request.name}' уже существует")
         }
+        groupMailboxValidator.validateForAssignmentGroup(request.mailboxEmail, null)
         validateOperatorsExist(request.operatorIds)
         val group =
             AssignmentGroup(
                 name = request.name,
                 description = request.description,
+                mailboxEmail = groupMailboxValidator.normalize(request.mailboxEmail),
                 operatorIds = request.operatorIds.toMutableSet(),
             )
         return toResponse(assignmentGroupRepository.save(group))
@@ -51,9 +54,11 @@ class AssignmentGroupService(
         if (assignmentGroupRepository.existsByNameAndIdNot(request.name, id)) {
             throw DuplicateResourceException("Группа назначения '${request.name}' уже существует")
         }
+        groupMailboxValidator.validateForAssignmentGroup(request.mailboxEmail, id)
         validateOperatorsExist(request.operatorIds)
         group.name = request.name
         group.description = request.description
+        group.mailboxEmail = groupMailboxValidator.normalize(request.mailboxEmail)
         group.operatorIds = request.operatorIds.toMutableSet()
         return toResponse(assignmentGroupRepository.save(group))
     }

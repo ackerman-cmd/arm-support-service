@@ -34,6 +34,7 @@ data class AppealResponse(
     val assignmentGroup: AssignmentGroupSummaryResponse?,
     val skillGroup: SkillGroupSummaryResponse?,
     val createdById: UUID,
+    val emailConversationId: UUID?,
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     val closedAt: LocalDateTime?,
     @JsonFormat(shape = JsonFormat.Shape.STRING)
@@ -64,6 +65,7 @@ data class AppealResponse(
             assignmentGroup = appeal.assignmentGroup?.let { AssignmentGroupSummaryResponse.from(it) },
             skillGroup = appeal.skillGroup?.let { SkillGroupSummaryResponse.from(it) },
             createdById = appeal.createdById,
+            emailConversationId = appeal.emailConversationId,
             closedAt = appeal.closedAt,
             createdAt = appeal.createdAt,
             updatedAt = appeal.updatedAt,

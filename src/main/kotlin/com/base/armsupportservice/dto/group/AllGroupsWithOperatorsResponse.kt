@@ -6,6 +6,7 @@ import java.util.UUID
 data class GroupWithOperatorsDto(
     val id: UUID,
     val name: String,
+    val mailboxEmail: String?,
     val operators: List<OperatorSummaryResponse>,
 )
 

@@ -10,6 +10,7 @@ data class SkillGroupResponse(
     val id: UUID,
     val name: String,
     val description: String?,
+    val mailboxEmail: String?,
     val skills: Set<String>,
     val operators: List<OperatorSummaryResponse>,
     val operatorCount: Int,
@@ -26,6 +27,7 @@ data class SkillGroupResponse(
             id = group.id,
             name = group.name,
             description = group.description,
+            mailboxEmail = group.mailboxEmail,
             skills = group.skills,
             operators = operators,
             operatorCount = operators.size,
@@ -38,6 +40,7 @@ data class SkillGroupResponse(
 data class SkillGroupSummaryResponse(
     val id: UUID,
     val name: String,
+    val mailboxEmail: String?,
     val skills: Set<String>,
     val operatorCount: Int,
 ) {
@@ -46,6 +49,7 @@ data class SkillGroupSummaryResponse(
             SkillGroupSummaryResponse(
                 id = group.id,
                 name = group.name,
+                mailboxEmail = group.mailboxEmail,
                 skills = group.skills,
                 operatorCount = group.operatorIds.size,
             )

@@ -15,4 +15,6 @@ interface SkillGroupRepository : JpaRepository<SkillGroup, UUID> {
 
     @Query("SELECT g FROM SkillGroup g WHERE :operatorId MEMBER OF g.operatorIds")
     fun findAllByOperatorId(operatorId: UUID): List<SkillGroup>
+
+    fun findByMailboxEmail(mailboxEmail: String): SkillGroup?
 }

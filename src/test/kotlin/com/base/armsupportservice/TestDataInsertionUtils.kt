@@ -111,6 +111,7 @@ class TestDataInsertionUtils(
         assignmentGroupId: UUID? = null,
         skillGroupId: UUID? = null,
         assignedOperatorId: UUID? = null,
+        emailConversationId: UUID? = null,
     ): Appeal =
         appealRepository.save(
             Appeal(
@@ -123,6 +124,7 @@ class TestDataInsertionUtils(
                 assignmentGroupId = assignmentGroupId,
                 skillGroupId = skillGroupId,
                 assignedOperatorId = assignedOperatorId,
+                emailConversationId = emailConversationId,
                 createdById = createdById,
             ),
         )

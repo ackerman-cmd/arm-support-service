@@ -42,6 +42,7 @@ class GroupReferenceService(
                     GroupWithOperatorsDto(
                         id = group.id,
                         name = group.name,
+                        mailboxEmail = group.mailboxEmail,
                         operators = group.operatorIds.mapNotNull { usersById[it] },
                     )
                 },
@@ -50,6 +51,7 @@ class GroupReferenceService(
                     GroupWithOperatorsDto(
                         id = group.id,
                         name = group.name,
+                        mailboxEmail = group.mailboxEmail,
                         operators = group.operatorIds.mapNotNull { usersById[it] },
                     )
                 },

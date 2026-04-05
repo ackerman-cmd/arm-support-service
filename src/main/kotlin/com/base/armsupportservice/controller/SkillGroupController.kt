@@ -13,7 +13,6 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
 import org.springframework.http.HttpStatus
-import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -32,14 +31,12 @@ class SkillGroupController(
     private val skillGroupService: SkillGroupService,
 ) {
     @GetMapping
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(summary = "Список скилл-групп")
     fun getAll(
         @ParameterObject @PageableDefault(size = 20, sort = ["name"]) pageable: Pageable,
     ): Page<SkillGroupResponse> = skillGroupService.getAll(pageable)
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(summary = "Получить скилл-группу по ID")
     fun getById(
         @PathVariable id: UUID,
@@ -47,14 +44,12 @@ class SkillGroupController(
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('ADMIN_ACCESS')")
     @Operation(summary = "Создать скилл-группу")
     fun create(
         @Valid @RequestBody request: SkillGroupRequest,
     ): SkillGroupResponse = skillGroupService.create(request)
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN_ACCESS')")
     @Operation(summary = "Обновить скилл-группу")
     fun update(
         @PathVariable id: UUID,
@@ -62,7 +57,6 @@ class SkillGroupController(
     ): SkillGroupResponse = skillGroupService.update(id, request)
 
     @PostMapping("/{id}/operators")
-    @PreAuthorize("hasAuthority('ADMIN_ACCESS')")
     @Operation(summary = "Добавить операторов в скилл-группу")
     fun addOperators(
         @PathVariable id: UUID,
@@ -70,7 +64,6 @@ class SkillGroupController(
     ): SkillGroupResponse = skillGroupService.addOperators(id, request.operatorIds)
 
     @DeleteMapping("/{id}/operators/{operatorId}")
-    @PreAuthorize("hasAuthority('ADMIN_ACCESS')")
     @Operation(summary = "Удалить оператора из скилл-группы")
     fun removeOperator(
         @PathVariable id: UUID,
@@ -78,7 +71,6 @@ class SkillGroupController(
     ): SkillGroupResponse = skillGroupService.removeOperator(id, operatorId)
 
     @PostMapping("/fetch")
-    @PreAuthorize("hasAuthority('APPEAL_READ')")
     @Operation(summary = "Пакетная загрузка скилл-групп по списку ID")
     fun fetchByIds(
         @Valid @RequestBody request: FetchByIdsRequest,
@@ -86,7 +78,6 @@ class SkillGroupController(
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('ADMIN_ACCESS')")
     @Operation(summary = "Удалить скилл-группу")
     fun delete(
         @PathVariable id: UUID,

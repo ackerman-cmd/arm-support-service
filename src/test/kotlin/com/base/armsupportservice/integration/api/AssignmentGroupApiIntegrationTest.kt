@@ -41,7 +41,7 @@ class AssignmentGroupApiIntegrationTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `POST assignment-group without admin returns 403`() {
+    fun `POST assignment-group succeeds for operator`() {
         mockMvc
             .perform(
                 post("/api/v1/assignment-groups")
@@ -52,7 +52,8 @@ class AssignmentGroupApiIntegrationTest : AbstractIntegrationTest() {
                             AssignmentGroupRequest(name = "G"),
                         ),
                     ),
-            ).andExpect(status().isForbidden)
+            ).andExpect(status().isCreated)
+            .andExpect(jsonPath("$.name").value("G"))
     }
 
     @Test

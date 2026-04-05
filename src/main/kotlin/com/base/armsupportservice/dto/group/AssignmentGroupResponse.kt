@@ -10,6 +10,7 @@ data class AssignmentGroupResponse(
     val id: UUID,
     val name: String,
     val description: String?,
+    val mailboxEmail: String?,
     val operators: List<OperatorSummaryResponse>,
     val operatorCount: Int,
     @JsonFormat(shape = JsonFormat.Shape.STRING)
@@ -25,6 +26,7 @@ data class AssignmentGroupResponse(
             id = group.id,
             name = group.name,
             description = group.description,
+            mailboxEmail = group.mailboxEmail,
             operators = operators,
             operatorCount = operators.size,
             createdAt = group.createdAt,
@@ -36,6 +38,7 @@ data class AssignmentGroupResponse(
 data class AssignmentGroupSummaryResponse(
     val id: UUID,
     val name: String,
+    val mailboxEmail: String?,
     val operatorCount: Int,
 ) {
     companion object {
@@ -43,6 +46,7 @@ data class AssignmentGroupSummaryResponse(
             AssignmentGroupSummaryResponse(
                 id = group.id,
                 name = group.name,
+                mailboxEmail = group.mailboxEmail,
                 operatorCount = group.operatorIds.size,
             )
     }

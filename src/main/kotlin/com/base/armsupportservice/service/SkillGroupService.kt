@@ -20,6 +20,7 @@ import java.util.UUID
 class SkillGroupService(
     private val skillGroupRepository: SkillGroupRepository,
     private val syncedUserRepository: SyncedUserRepository,
+    private val groupMailboxValidator: GroupMailboxValidator,
 ) {
     fun getById(id: UUID): SkillGroupResponse {
         val group = skillGroupRepository.findById(id).orElseThrow { GroupNotFoundException(id) }
@@ -33,11 +34,13 @@ class SkillGroupService(
         if (skillGroupRepository.existsByName(request.name)) {
             throw DuplicateResourceException("Скилл-группа '${request.name}' уже существует")
         }
+        groupMailboxValidator.validateForSkillGroup(request.mailboxEmail, null)
         validateOperatorsExist(request.operatorIds)
         val group =
             SkillGroup(
                 name = request.name,
                 description = request.description,
+                mailboxEmail = groupMailboxValidator.normalize(request.mailboxEmail),
                 skills = request.skills.toMutableSet(),
                 operatorIds = request.operatorIds.toMutableSet(),
             )
@@ -53,9 +56,11 @@ class SkillGroupService(
         if (skillGroupRepository.existsByNameAndIdNot(request.name, id)) {
             throw DuplicateResourceException("Скилл-группа '${request.name}' уже существует")
         }
+        groupMailboxValidator.validateForSkillGroup(request.mailboxEmail, id)
         validateOperatorsExist(request.operatorIds)
         group.name = request.name
         group.description = request.description
+        group.mailboxEmail = groupMailboxValidator.normalize(request.mailboxEmail)
         group.skills = request.skills.toMutableSet()
         group.operatorIds = request.operatorIds.toMutableSet()
         return toResponse(skillGroupRepository.save(group))

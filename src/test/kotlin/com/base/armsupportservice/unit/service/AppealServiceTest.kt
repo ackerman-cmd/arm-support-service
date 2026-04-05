@@ -15,6 +15,7 @@ import com.base.armsupportservice.dto.appeal.AssignOperatorRequest
 import com.base.armsupportservice.exception.AppealNotFoundException
 import com.base.armsupportservice.exception.InvalidStatusTransitionException
 import com.base.armsupportservice.exception.OrganizationNotFoundException
+import com.base.armsupportservice.repository.AppealEventRepository
 import com.base.armsupportservice.repository.AppealMessageRepository
 import com.base.armsupportservice.repository.AppealRepository
 import com.base.armsupportservice.repository.AppealTopicRepository
@@ -30,6 +31,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
@@ -44,6 +46,7 @@ import kotlin.test.assertFailsWith
 class AppealServiceTest {
     private val appealRepository: AppealRepository = mockk(relaxed = true)
     private val appealMessageRepository: AppealMessageRepository = mockk(relaxed = true)
+    private val appealEventRepository: AppealEventRepository = mockk(relaxed = true)
     private val organizationRepository: OrganizationRepository = mockk(relaxed = true)
     private val assignmentGroupRepository: AssignmentGroupRepository = mockk(relaxed = true)
     private val skillGroupRepository: SkillGroupRepository = mockk(relaxed = true)
@@ -55,6 +58,7 @@ class AppealServiceTest {
         AppealService(
             appealRepository,
             appealMessageRepository,
+            appealEventRepository,
             organizationRepository,
             assignmentGroupRepository,
             skillGroupRepository,
@@ -64,6 +68,11 @@ class AppealServiceTest {
         )
 
     private val userId: UUID = UUID.randomUUID()
+
+    @BeforeEach
+    fun stubAppealEventSave() {
+        every { appealEventRepository.save(any()) } answers { firstArg() }
+    }
 
     private fun inboundAppeal(
         id: UUID = UUID.randomUUID(),

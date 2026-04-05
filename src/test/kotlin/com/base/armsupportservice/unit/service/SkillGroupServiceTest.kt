@@ -5,8 +5,10 @@ import com.base.armsupportservice.dto.group.SkillGroupRequest
 import com.base.armsupportservice.exception.DuplicateResourceException
 import com.base.armsupportservice.exception.GroupNotFoundException
 import com.base.armsupportservice.exception.OperatorNotFoundException
+import com.base.armsupportservice.repository.AssignmentGroupRepository
 import com.base.armsupportservice.repository.SkillGroupRepository
 import com.base.armsupportservice.repository.SyncedUserRepository
+import com.base.armsupportservice.service.GroupMailboxValidator
 import com.base.armsupportservice.service.SkillGroupService
 import io.mockk.every
 import io.mockk.mockk
@@ -18,9 +20,15 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class SkillGroupServiceTest {
+    private val assignmentGroupRepository: AssignmentGroupRepository = mockk(relaxed = true)
     private val skillGroupRepository: SkillGroupRepository = mockk(relaxed = true)
     private val syncedUserRepository: SyncedUserRepository = mockk(relaxed = true)
-    private val service = SkillGroupService(skillGroupRepository, syncedUserRepository)
+    private val service =
+        SkillGroupService(
+            skillGroupRepository,
+            syncedUserRepository,
+            GroupMailboxValidator(assignmentGroupRepository, skillGroupRepository),
+        )
 
     @Test
     fun `create throws when name duplicate`() {
