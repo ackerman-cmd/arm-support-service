@@ -1,6 +1,7 @@
 package com.base.armsupportservice.service
 
 import com.base.armsupportservice.domain.appeal.Appeal
+import com.base.armsupportservice.domain.appeal.AppealChannel
 import com.base.armsupportservice.domain.appeal.AppealEvent
 import com.base.armsupportservice.domain.appeal.AppealEventType
 import com.base.armsupportservice.domain.appeal.AppealMessage
@@ -22,6 +23,9 @@ import com.base.armsupportservice.exception.AppealNotFoundException
 import com.base.armsupportservice.exception.GroupNotFoundException
 import com.base.armsupportservice.exception.OperatorNotFoundException
 import com.base.armsupportservice.exception.OrganizationNotFoundException
+import com.base.armsupportservice.integration.email.EmailIntegrationClient
+import com.base.armsupportservice.integration.email.dto.http.ReplyEmailRequest
+import com.base.armsupportservice.integration.email.dto.http.SendEmailRequest
 import com.base.armsupportservice.repository.AppealEventRepository
 import com.base.armsupportservice.repository.AppealMessageRepository
 import com.base.armsupportservice.repository.AppealRepository
@@ -52,6 +56,7 @@ class AppealService(
     private val syncedUserRepository: SyncedUserRepository,
     private val appealTopicRepository: AppealTopicRepository,
     private val permissionService: PermissionService,
+    private val emailIntegrationClient: EmailIntegrationClient,
 ) {
     fun getById(id: UUID): AppealResponse {
         val appeal = findOrThrow(id)
@@ -363,6 +368,53 @@ class AppealService(
         val nextStatus = AppealStatusMachine.afterOperatorReply(appeal.status)
         appeal.status = nextStatus
 
+        // Для EMAIL — отправляем через email-integration-service и получаем messageId/conversationId
+        var externalMessageId: String? = request.externalMessageId
+        if (request.channel == AppealChannel.EMAIL) {
+            val recipient =
+                appeal.contactEmail?.takeIf { it.isNotBlank() }
+                    ?: throw IllegalStateException(
+                        "У обращения ${appeal.id} не указан contactEmail — невозможно отправить письмо",
+                    )
+
+            val created =
+                if (appeal.emailConversationId == null) {
+                    // Первое письмо — создаём новую переписку в email-integration-service
+                    val fromEmail =
+                        request.fromEmail?.takeIf { it.isNotBlank() }
+                            ?: throw IllegalArgumentException(
+                                "Для первого письма по обращению обязателен fromEmail (почтовый ящик-отправитель)",
+                            )
+                    emailIntegrationClient.sendEmail(
+                        SendEmailRequest(
+                            fromEmail = fromEmail,
+                            to = listOf(recipient),
+                            subject = appeal.subject,
+                            htmlBody = request.htmlContent,
+                            textBody = request.content,
+                            createdByUserId = principal.userId,
+                        ),
+                    )
+                } else {
+                    // Переписка уже существует — отвечаем в неё
+                    emailIntegrationClient.replyEmail(
+                        ReplyEmailRequest(
+                            conversationId = appeal.emailConversationId!!,
+                            to = listOf(recipient),
+                            htmlBody = request.htmlContent,
+                            textBody = request.content,
+                            createdByUserId = principal.userId,
+                        ),
+                    )
+                }
+
+            // Сохраняем привязку conversationId к обращению (только при первой отправке)
+            if (appeal.emailConversationId == null) {
+                appeal.emailConversationId = created.conversationId
+            }
+            externalMessageId = created.messageId.toString()
+        }
+
         val message =
             AppealMessage(
                 appeal = appeal,
@@ -370,7 +422,7 @@ class AppealService(
                 senderType = MessageSenderType.OPERATOR,
                 content = request.content,
                 channel = request.channel,
-                externalMessageId = request.externalMessageId,
+                externalMessageId = externalMessageId,
             )
 
         val savedAppeal = appealRepository.save(appeal)

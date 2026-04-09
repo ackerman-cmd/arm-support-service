@@ -119,6 +119,30 @@ class PermissionServiceTest {
     }
 
     @Test
+    fun `writer cannot REPLY_TO_CLIENT on WAITING_CLIENT_RESPONSE`() {
+        // После отправки письма оператором статус становится WAITING_CLIENT_RESPONSE,
+        // и повторный ответ недоступен пока оператор не возьмёт обращение в работу заново
+        val actions =
+            service.availableActions(
+                appeal(AppealStatus.WAITING_CLIENT_RESPONSE),
+                principal("APPEAL_WRITE"),
+            )
+        assertFalse(AppealAction.REPLY_TO_CLIENT in actions)
+    }
+
+    @Test
+    fun `disabled REPLY_TO_CLIENT on WAITING_CLIENT_RESPONSE hints to re-take into work`() {
+        val result =
+            service.evaluateActions(
+                appeal(AppealStatus.WAITING_CLIENT_RESPONSE),
+                principal("APPEAL_WRITE"),
+            )
+        val item = result.first { it.action == AppealAction.REPLY_TO_CLIENT }
+        assertFalse(item.enabled)
+        assertTrue(item.hint.contains("работ", ignoreCase = true))
+    }
+
+    @Test
     fun `writer cannot MARK_AS_SPAM on already SPAM`() {
         val actions =
             service.availableActions(

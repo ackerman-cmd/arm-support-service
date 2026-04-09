@@ -73,12 +73,14 @@ class TestDataInsertionUtils(
     fun insertAssignmentGroup(
         name: String = "Группа ${UUID.randomUUID()}",
         description: String? = null,
+        mailboxEmail: String? = null,
         operatorIds: MutableSet<UUID> = mutableSetOf(),
     ): AssignmentGroup =
         assignmentGroupRepository.save(
             AssignmentGroup(
                 name = name,
                 description = description,
+                mailboxEmail = mailboxEmail,
                 operatorIds = operatorIds,
             ),
         )
@@ -87,6 +89,7 @@ class TestDataInsertionUtils(
     fun insertSkillGroup(
         name: String = "Скилл-группа ${UUID.randomUUID()}",
         description: String? = null,
+        mailboxEmail: String? = null,
         skills: MutableSet<String> = mutableSetOf(),
         operatorIds: MutableSet<UUID> = mutableSetOf(),
     ): SkillGroup =
@@ -94,6 +97,7 @@ class TestDataInsertionUtils(
             SkillGroup(
                 name = name,
                 description = description,
+                mailboxEmail = mailboxEmail,
                 skills = skills,
                 operatorIds = operatorIds,
             ),

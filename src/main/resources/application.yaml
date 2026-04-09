@@ -9,9 +9,9 @@ spring:
     import: optional:file:./secrets.yaml
 
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:6434}/${POSTGRES_DB:user_service}?currentSchema=${POSTGRES_SCHEMA:arm_support}
-    username: ${POSTGRES_USER:admin}
-    password: ${POSTGRES_PASSWORD:secret}
+    url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?currentSchema=${POSTGRES_SCHEMA}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -19,16 +19,16 @@ spring:
       ddl-auto: validate
     properties:
       hibernate:
-        default_schema: ${POSTGRES_SCHEMA:arm_support}
+        default_schema: ${POSTGRES_SCHEMA}
         format_sql: true
     open-in-view: false
 
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
-    default-schema: ${POSTGRES_SCHEMA:arm_support}
+    default-schema: ${POSTGRES_SCHEMA}
 
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
     consumer:
       group-id: arm-support-service
       auto-offset-reset: earliest
@@ -42,7 +42,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${USER_SERVICE_URL:http://localhost:8080}
+          issuer-uri: ${USER_SERVICE_URL}
 
 management:
   endpoint:
@@ -61,7 +61,7 @@ management:
       enabled: true
 
 app:
-  front-url: ${APP_FRONT_URL:http://localhost:3000}
+  front-url: ${APP_FRONT_URL}
   kafka:
     topics:
       user-sync: user-sync
@@ -72,5 +72,5 @@ app:
       email-outbound-sent: email.outbound.sent
       email-outbound-failed: email.outbound.failed
   email-integration:
-    base-url: ${EMAIL_INTEGRATION_URL:http://localhost:8084}
+    base-url: ${EMAIL_INTEGRATION_URL}
     kafka-consumers-enabled: true

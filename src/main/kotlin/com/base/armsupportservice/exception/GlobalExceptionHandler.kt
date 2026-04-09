@@ -24,6 +24,10 @@ class GlobalExceptionHandler {
     @ExceptionHandler(GroupNotFoundException::class)
     fun handleGroupNotFound(ex: GroupNotFoundException): ResponseEntity<ErrorResponse> = notFound(ex.message ?: "Группа не найдена")
 
+    @ExceptionHandler(MailboxNotConfiguredException::class)
+    fun handleMailboxNotConfigured(ex: MailboxNotConfiguredException): ResponseEntity<ErrorResponse> =
+        notFound(ex.message ?: "Для группы не настроен почтовый ящик")
+
     @ExceptionHandler(OperatorNotFoundException::class)
     fun handleOperatorNotFound(ex: OperatorNotFoundException): ResponseEntity<ErrorResponse> = notFound(ex.message ?: "Оператор не найден")
 

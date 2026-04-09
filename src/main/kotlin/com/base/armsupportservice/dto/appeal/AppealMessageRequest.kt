@@ -10,4 +10,11 @@ data class AppealMessageRequest(
     @field:NotNull(message = "Канал отправки обязателен")
     val channel: AppealChannel,
     val externalMessageId: String? = null,
+    /**
+     * Адрес ящика-отправителя. Обязателен для channel=EMAIL,
+     * когда у обращения ещё нет `emailConversationId` (первое исходящее письмо).
+     */
+    val fromEmail: String? = null,
+    /** HTML-тело письма (только для channel=EMAIL). */
+    val htmlContent: String? = null,
 )

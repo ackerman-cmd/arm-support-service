@@ -86,8 +86,15 @@ class PermissionService {
                             isTerminal ->
                                 disable("Нельзя ответить по закрытому обращению")
 
+                            appeal.status == AppealStatus.WAITING_CLIENT_RESPONSE ->
+                                disable(
+                                    "Ответ уже отправлен, ожидается ответ клиента. " +
+                                        "Чтобы написать снова — возьмите обращение в работу заново " +
+                                        "или переназначьте на другого оператора",
+                                )
+
                             appeal.status !in REPLYABLE_STATUSES ->
-                                disable("Ответ доступен только когда обращение «В работе» или «Ожидает ответа клиента»")
+                                disable("Ответ доступен только когда обращение «В работе»")
 
                             else ->
                                 enable("После отправки сообщения статус перейдёт в «Ожидает ответа клиента»")
@@ -257,6 +264,6 @@ class PermissionService {
 
         val TERMINAL_STATUSES = setOf(AppealStatus.CLOSED, AppealStatus.SPAM)
         val TAKEABLE_STATUSES = setOf(AppealStatus.PENDING_PROCESSING, AppealStatus.WAITING_CLIENT_RESPONSE)
-        val REPLYABLE_STATUSES = setOf(AppealStatus.IN_PROGRESS, AppealStatus.WAITING_CLIENT_RESPONSE)
+        val REPLYABLE_STATUSES = setOf(AppealStatus.IN_PROGRESS)
     }
 }

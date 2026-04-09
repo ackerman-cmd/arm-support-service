@@ -96,7 +96,7 @@ class AppealApiIntegrationTest : AbstractIntegrationTest() {
         val msg =
             AppealMessageRequest(
                 content = "Ответ оператора",
-                channel = AppealChannel.EMAIL,
+                channel = AppealChannel.CHAT,
             )
         mockMvc
             .perform(
@@ -264,6 +264,7 @@ class AppealApiIntegrationTest : AbstractIntegrationTest() {
                 subject = "Интеграционное обращение",
                 channel = AppealChannel.EMAIL,
                 direction = AppealDirection.INBOUND,
+                contactEmail = "client@test.local",
             )
         val result =
             mockMvc

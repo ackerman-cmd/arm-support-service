@@ -10,6 +10,7 @@ class TestDbCleaner(
 ) {
     @Transactional
     fun clearAllTables() {
+        jdbc.update("DELETE FROM arm_support.appeal_events")
         jdbc.update("DELETE FROM arm_support.appeal_messages")
         jdbc.update("DELETE FROM arm_support.appeals")
         jdbc.update("DELETE FROM arm_support.assignment_group_operators")

@@ -13,7 +13,7 @@ interface SkillGroupRepository : JpaRepository<SkillGroup, UUID> {
         id: UUID,
     ): Boolean
 
-    @Query("SELECT g FROM SkillGroup g WHERE :operatorId MEMBER OF g.operatorIds")
+    @Query("SELECT g FROM SkillGroup g JOIN g.operatorIds oid WHERE oid = :operatorId")
     fun findAllByOperatorId(operatorId: UUID): List<SkillGroup>
 
     fun findByMailboxEmail(mailboxEmail: String): SkillGroup?
