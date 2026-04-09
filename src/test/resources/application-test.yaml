@@ -31,6 +31,7 @@ spring:
           issuer-uri: http://localhost:8080
 
 app:
+  front-url: http://localhost:3000
   kafka:
     topics:
       user-sync: user-sync-test
