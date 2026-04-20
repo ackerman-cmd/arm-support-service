@@ -49,6 +49,8 @@ class EmailEventServiceTest {
         internetMessageId = null,
         isNewConversation = isNewConversation,
         receivedAt = Instant.now().toString(),
+        textBody = "text",
+        htmlBody = "text",
     )
 
     private fun savedAppeal(

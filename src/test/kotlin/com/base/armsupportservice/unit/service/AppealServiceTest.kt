@@ -16,7 +16,9 @@ import com.base.armsupportservice.exception.AppealNotFoundException
 import com.base.armsupportservice.exception.InvalidStatusTransitionException
 import com.base.armsupportservice.exception.OrganizationNotFoundException
 import com.base.armsupportservice.integration.email.EmailIntegrationClient
+import com.base.armsupportservice.integration.vk.VkIntegrationClient
 import com.base.armsupportservice.repository.AppealEventRepository
+import com.base.armsupportservice.repository.AppealMessageAttachmentRepository
 import com.base.armsupportservice.repository.AppealMessageRepository
 import com.base.armsupportservice.repository.AppealRepository
 import com.base.armsupportservice.repository.AppealTopicRepository
@@ -55,11 +57,14 @@ class AppealServiceTest {
     private val appealTopicRepository: AppealTopicRepository = mockk(relaxed = true)
     private val permissionService: PermissionService = PermissionService()
     private val emailIntegrationClient: EmailIntegrationClient = mockk(relaxed = true)
+    private val vkIntegrationClient: VkIntegrationClient = mockk(relaxed = true)
+    private val appealMessageAttachmentRepository: AppealMessageAttachmentRepository = mockk()
 
     private val service =
         AppealService(
             appealRepository,
             appealMessageRepository,
+            appealMessageAttachmentRepository,
             appealEventRepository,
             organizationRepository,
             assignmentGroupRepository,
@@ -68,6 +73,7 @@ class AppealServiceTest {
             appealTopicRepository,
             permissionService,
             emailIntegrationClient,
+            vkIntegrationClient,
         )
 
     private val userId: UUID = UUID.randomUUID()

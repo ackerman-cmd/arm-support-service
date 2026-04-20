@@ -99,7 +99,7 @@ class AppealServiceIntegrationTest : AbstractIntegrationTest() {
             appealService.create(
                 AppealRequest(
                     subject = "Поток",
-                    channel = AppealChannel.CALL,
+                    channel = AppealChannel.CHAT,
                     direction = AppealDirection.INBOUND,
                 ),
                 principal,

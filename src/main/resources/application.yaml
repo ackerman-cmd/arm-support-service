@@ -8,6 +8,11 @@ spring:
   config:
     import: optional:file:./secrets.yaml
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 25MB
+
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?currentSchema=${POSTGRES_SCHEMA}
     username: ${POSTGRES_USER}
@@ -71,6 +76,13 @@ app:
       email-outbound-requested: email.outbound.requested
       email-outbound-sent: email.outbound.sent
       email-outbound-failed: email.outbound.failed
+      vk-message-received: vk.message.received
+      vk-message-sent: vk.message.sent
+      vk-message-failed: vk.message.failed
   email-integration:
     base-url: ${EMAIL_INTEGRATION_URL}
     kafka-consumers-enabled: true
+  vk-integration:
+    base-url: ${VK_SERVICE_URL:http://localhost:8085}
+    kafka-consumers-enabled: true
+    read-timeout-millis: 60000

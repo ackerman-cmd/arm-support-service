@@ -11,4 +11,7 @@ data class KafkaTopicsProperties(
     var emailOutboundRequested: String = "email.outbound.requested",
     var emailOutboundSent: String = "email.outbound.sent",
     var emailOutboundFailed: String = "email.outbound.failed",
+    var vkMessageReceived: String = "vk.message.received",
+    var vkMessageSent: String = "vk.message.sent",
+    var vkMessageFailed: String = "vk.message.failed",
 )

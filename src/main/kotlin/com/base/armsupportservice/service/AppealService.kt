@@ -5,19 +5,24 @@ import com.base.armsupportservice.domain.appeal.AppealChannel
 import com.base.armsupportservice.domain.appeal.AppealEvent
 import com.base.armsupportservice.domain.appeal.AppealEventType
 import com.base.armsupportservice.domain.appeal.AppealMessage
+import com.base.armsupportservice.domain.appeal.AppealMessageAttachment
 import com.base.armsupportservice.domain.appeal.AppealStatus
 import com.base.armsupportservice.domain.appeal.AppealStatusMachine
+import com.base.armsupportservice.domain.appeal.MessageDeliveryStatus
 import com.base.armsupportservice.domain.appeal.MessageSenderType
 import com.base.armsupportservice.domain.user.UserStatus
 import com.base.armsupportservice.dto.appeal.AppealActionsResponse
 import com.base.armsupportservice.dto.appeal.AppealEventResponse
 import com.base.armsupportservice.dto.appeal.AppealFilterRequest
+import com.base.armsupportservice.dto.appeal.AppealMessageAttachmentResponse
 import com.base.armsupportservice.dto.appeal.AppealMessageRequest
 import com.base.armsupportservice.dto.appeal.AppealMessageResponse
 import com.base.armsupportservice.dto.appeal.AppealRequest
 import com.base.armsupportservice.dto.appeal.AppealResponse
 import com.base.armsupportservice.dto.appeal.AppealUpdateRequest
 import com.base.armsupportservice.dto.appeal.AssignOperatorRequest
+import com.base.armsupportservice.dto.appeal.ChatMessageRequest
+import com.base.armsupportservice.dto.appeal.EmailMessageRequest
 import com.base.armsupportservice.dto.common.OperatorSummaryResponse
 import com.base.armsupportservice.exception.AppealNotFoundException
 import com.base.armsupportservice.exception.GroupNotFoundException
@@ -26,7 +31,9 @@ import com.base.armsupportservice.exception.OrganizationNotFoundException
 import com.base.armsupportservice.integration.email.EmailIntegrationClient
 import com.base.armsupportservice.integration.email.dto.http.ReplyEmailRequest
 import com.base.armsupportservice.integration.email.dto.http.SendEmailRequest
+import com.base.armsupportservice.integration.vk.VkIntegrationClient
 import com.base.armsupportservice.repository.AppealEventRepository
+import com.base.armsupportservice.repository.AppealMessageAttachmentRepository
 import com.base.armsupportservice.repository.AppealMessageRepository
 import com.base.armsupportservice.repository.AppealRepository
 import com.base.armsupportservice.repository.AppealSpecification
@@ -41,6 +48,7 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.multipart.MultipartFile
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -49,6 +57,7 @@ import java.util.UUID
 class AppealService(
     private val appealRepository: AppealRepository,
     private val appealMessageRepository: AppealMessageRepository,
+    private val appealMessageAttachmentRepository: AppealMessageAttachmentRepository,
     private val appealEventRepository: AppealEventRepository,
     private val organizationRepository: OrganizationRepository,
     private val assignmentGroupRepository: AssignmentGroupRepository,
@@ -57,6 +66,7 @@ class AppealService(
     private val appealTopicRepository: AppealTopicRepository,
     private val permissionService: PermissionService,
     private val emailIntegrationClient: EmailIntegrationClient,
+    private val vkIntegrationClient: VkIntegrationClient,
 ) {
     fun getById(id: UUID): AppealResponse {
         val appeal = findOrThrow(id)
@@ -356,63 +366,54 @@ class AppealService(
     @Transactional
     fun close(id: UUID): AppealResponse = changeStatus(id, AppealStatus.CLOSED)
 
+    // ── EMAIL channel ─────────────────────────────────────────────────────────
+
     @Transactional
-    fun sendOperatorMessage(
+    fun sendEmailMessage(
         id: UUID,
-        request: AppealMessageRequest,
+        request: EmailMessageRequest,
         principal: UserPrincipal,
     ): AppealMessageResponse {
         val appeal = findOrThrow(id)
+        val recipient =
+            appeal.contactEmail?.takeIf { it.isNotBlank() }
+                ?: throw IllegalStateException("У обращения ${appeal.id} не указан contactEmail")
 
         val prevStatus = appeal.status
         val nextStatus = AppealStatusMachine.afterOperatorReply(appeal.status)
         appeal.status = nextStatus
 
-        // Для EMAIL — отправляем через email-integration-service и получаем messageId/conversationId
-        var externalMessageId: String? = request.externalMessageId
-        if (request.channel == AppealChannel.EMAIL) {
-            val recipient =
-                appeal.contactEmail?.takeIf { it.isNotBlank() }
-                    ?: throw IllegalStateException(
-                        "У обращения ${appeal.id} не указан contactEmail — невозможно отправить письмо",
-                    )
-
-            val created =
-                if (appeal.emailConversationId == null) {
-                    // Первое письмо — создаём новую переписку в email-integration-service
-                    val fromEmail =
-                        request.fromEmail?.takeIf { it.isNotBlank() }
-                            ?: throw IllegalArgumentException(
-                                "Для первого письма по обращению обязателен fromEmail (почтовый ящик-отправитель)",
-                            )
-                    emailIntegrationClient.sendEmail(
-                        SendEmailRequest(
-                            fromEmail = fromEmail,
-                            to = listOf(recipient),
-                            subject = appeal.subject,
-                            htmlBody = request.htmlContent,
-                            textBody = request.content,
-                            createdByUserId = principal.userId,
-                        ),
-                    )
-                } else {
-                    // Переписка уже существует — отвечаем в неё
-                    emailIntegrationClient.replyEmail(
-                        ReplyEmailRequest(
-                            conversationId = appeal.emailConversationId!!,
-                            to = listOf(recipient),
-                            htmlBody = request.htmlContent,
-                            textBody = request.content,
-                            createdByUserId = principal.userId,
-                        ),
-                    )
-                }
-
-            // Сохраняем привязку conversationId к обращению (только при первой отправке)
+        val created =
             if (appeal.emailConversationId == null) {
-                appeal.emailConversationId = created.conversationId
+                val fromEmail =
+                    request.fromEmail?.takeIf { it.isNotBlank() }
+                        ?: throw IllegalArgumentException(
+                            "fromEmail обязателен для первого письма (у обращения нет emailConversationId)",
+                        )
+                emailIntegrationClient.sendEmail(
+                    SendEmailRequest(
+                        fromEmail = fromEmail,
+                        to = listOf(recipient),
+                        subject = appeal.subject,
+                        htmlBody = request.htmlContent,
+                        textBody = request.content.ifBlank { null },
+                        createdByUserId = principal.userId,
+                    ),
+                )
+            } else {
+                emailIntegrationClient.replyEmail(
+                    ReplyEmailRequest(
+                        conversationId = appeal.emailConversationId!!,
+                        to = listOf(recipient),
+                        htmlBody = request.htmlContent,
+                        textBody = request.content.ifBlank { null },
+                        createdByUserId = principal.userId,
+                    ),
+                )
             }
-            externalMessageId = created.messageId.toString()
+
+        if (appeal.emailConversationId == null) {
+            appeal.emailConversationId = created.conversationId
         }
 
         val message =
@@ -420,9 +421,10 @@ class AppealService(
                 appeal = appeal,
                 senderId = principal.userId,
                 senderType = MessageSenderType.OPERATOR,
-                content = request.content,
-                channel = request.channel,
-                externalMessageId = externalMessageId,
+                content = request.content.ifBlank { "(html-письмо)" },
+                channel = AppealChannel.EMAIL,
+                externalMessageId = created.messageId.toString(),
+                deliveryStatus = null,
             )
 
         val savedAppeal = appealRepository.save(appeal)
@@ -437,6 +439,207 @@ class AppealService(
             ),
         )
         return toMessageResponse(saved)
+    }
+
+    @Transactional
+    fun sendEmailMessageWithAttachment(
+        id: UUID,
+        content: String,
+        fromEmail: String?,
+        htmlContent: String?,
+        file: MultipartFile,
+        principal: UserPrincipal,
+    ): AppealMessageResponse {
+        val appeal = findOrThrow(id)
+        val recipient =
+            appeal.contactEmail?.takeIf { it.isNotBlank() }
+                ?: throw IllegalStateException("У обращения ${appeal.id} не указан contactEmail")
+
+        val prevStatus = appeal.status
+        val nextStatus = AppealStatusMachine.afterOperatorReply(appeal.status)
+        appeal.status = nextStatus
+
+        val fileName = file.originalFilename ?: file.name
+
+        val created =
+            if (appeal.emailConversationId == null) {
+                val sender =
+                    fromEmail?.takeIf { it.isNotBlank() }
+                        ?: throw IllegalArgumentException("fromEmail обязателен для первого письма")
+                emailIntegrationClient.sendEmailWithAttachment(
+                    fromEmail = sender,
+                    to = listOf(recipient),
+                    subject = appeal.subject,
+                    textBody = content.ifBlank { null },
+                    htmlBody = htmlContent,
+                    createdByUserId = principal.userId,
+                    file = file,
+                )
+            } else {
+                emailIntegrationClient.replyEmailWithAttachment(
+                    conversationId = appeal.emailConversationId!!,
+                    to = listOf(recipient),
+                    textBody = content.ifBlank { null },
+                    htmlBody = htmlContent,
+                    createdByUserId = principal.userId,
+                    file = file,
+                )
+            }
+
+        if (appeal.emailConversationId == null) {
+            appeal.emailConversationId = created.conversationId
+        }
+
+        val message =
+            AppealMessage(
+                appeal = appeal,
+                senderId = principal.userId,
+                senderType = MessageSenderType.OPERATOR,
+                content = content.ifBlank { "(вложение: $fileName)" },
+                channel = AppealChannel.EMAIL,
+                externalMessageId = created.messageId.toString(),
+                deliveryStatus = null,
+            )
+        val savedAppeal = appealRepository.save(appeal)
+        val savedMessage = appealMessageRepository.save(message)
+        appealEventRepository.save(
+            AppealEvent(
+                appeal = savedAppeal,
+                eventType = AppealEventType.MESSAGE_SENT,
+                initiatorId = principal.userId,
+                fromStatus = if (prevStatus != nextStatus) prevStatus else null,
+                toStatus = if (prevStatus != nextStatus) nextStatus else null,
+            ),
+        )
+        return AppealMessageResponse.from(savedMessage, resolveOperator(principal.userId), emptyList())
+    }
+
+    // ── CHAT (VK) channel ─────────────────────────────────────────────────────
+
+    @Transactional
+    fun sendChatMessage(
+        id: UUID,
+        request: ChatMessageRequest,
+        principal: UserPrincipal,
+    ): AppealMessageResponse {
+        val appeal = findOrThrow(id)
+        val peerId =
+            appeal.vkPeerId
+                ?: throw IllegalStateException(
+                    "У обращения ${appeal.id} не указан vkPeerId — невозможно отправить VK сообщение",
+                )
+
+        val prevStatus = appeal.status
+        val nextStatus = AppealStatusMachine.afterOperatorReply(appeal.status)
+        appeal.status = nextStatus
+
+        val sent = vkIntegrationClient.sendMessage(peerId, request.content)
+        val externalMessageId = sent.vkMessageId?.toString()
+        val deliveryStatus = if (sent.vkMessageId != null) MessageDeliveryStatus.SENT else MessageDeliveryStatus.PENDING
+
+        val message =
+            AppealMessage(
+                appeal = appeal,
+                senderId = principal.userId,
+                senderType = MessageSenderType.OPERATOR,
+                content = request.content,
+                channel = AppealChannel.CHAT,
+                externalMessageId = externalMessageId,
+                deliveryStatus = deliveryStatus,
+            )
+
+        val savedAppeal = appealRepository.save(appeal)
+        val saved = appealMessageRepository.save(message)
+        appealEventRepository.save(
+            AppealEvent(
+                appeal = savedAppeal,
+                eventType = AppealEventType.MESSAGE_SENT,
+                initiatorId = principal.userId,
+                fromStatus = if (prevStatus != nextStatus) prevStatus else null,
+                toStatus = if (prevStatus != nextStatus) nextStatus else null,
+            ),
+        )
+        return toMessageResponse(saved)
+    }
+
+    @Transactional
+    fun sendChatMessageWithAttachment(
+        id: UUID,
+        content: String,
+        file: MultipartFile,
+        principal: UserPrincipal,
+    ): AppealMessageResponse {
+        val appeal = findOrThrow(id)
+        val peerId =
+            appeal.vkPeerId
+                ?: throw IllegalStateException(
+                    "У обращения ${appeal.id} не указан vkPeerId — невозможно отправить VK сообщение с вложением",
+                )
+
+        val prevStatus = appeal.status
+        val nextStatus = AppealStatusMachine.afterOperatorReply(appeal.status)
+        appeal.status = nextStatus
+
+        val fileName = file.originalFilename ?: file.name
+        val mimeType = file.contentType ?: "application/octet-stream"
+
+        val sent =
+            vkIntegrationClient.sendMessageWithAttachment(
+                peerId = peerId,
+                text = content,
+                fileName = fileName,
+                mimeType = mimeType,
+                fileBytes = file.bytes,
+            )
+
+        val deliveryStatus = if (sent.vkMessageId != null) MessageDeliveryStatus.SENT else MessageDeliveryStatus.PENDING
+
+        val message =
+            AppealMessage(
+                appeal = appeal,
+                senderId = principal.userId,
+                senderType = MessageSenderType.OPERATOR,
+                content = content.ifBlank { "(вложение: $fileName)" },
+                channel = AppealChannel.CHAT,
+                externalMessageId = sent.vkMessageId?.toString(),
+                deliveryStatus = deliveryStatus,
+            )
+
+        val savedAppeal = appealRepository.save(appeal)
+        val savedMessage = appealMessageRepository.save(message)
+
+        val attachments = mutableListOf<AppealMessageAttachment>()
+        sent.attachment?.let { att ->
+            attachments.add(
+                appealMessageAttachmentRepository.save(
+                    AppealMessageAttachment(
+                        message = savedMessage,
+                        attachmentType = att.type,
+                        fileName = att.fileName,
+                        mimeType = att.mimeType,
+                        s3Key = att.s3Key,
+                        s3Url = att.s3Url,
+                        fileSize = att.fileSize,
+                    ),
+                ),
+            )
+        }
+
+        appealEventRepository.save(
+            AppealEvent(
+                appeal = savedAppeal,
+                eventType = AppealEventType.MESSAGE_SENT,
+                initiatorId = principal.userId,
+                fromStatus = if (prevStatus != nextStatus) prevStatus else null,
+                toStatus = if (prevStatus != nextStatus) nextStatus else null,
+            ),
+        )
+
+        return AppealMessageResponse.from(
+            savedMessage,
+            resolveOperator(principal.userId),
+            attachments.map { AppealMessageAttachmentResponse.from(it) },
+        )
     }
 
     @Transactional
@@ -489,9 +692,18 @@ class AppealService(
         pageable: org.springframework.data.domain.Pageable,
     ): Page<AppealMessageResponse> {
         if (!appealRepository.existsById(id)) throw AppealNotFoundException(id)
-        return appealMessageRepository
-            .findByAppealIdOrderByCreatedAtAsc(id, pageable)
-            .map { toMessageResponse(it) }
+        val page = appealMessageRepository.findByAppealIdOrderByCreatedAtAsc(id, pageable)
+        val messageIds = page.content.map { it.id }
+        val attachmentsByMessageId =
+            appealMessageAttachmentRepository
+                .findAllByMessageIdIn(messageIds)
+                .groupBy { it.message.id }
+        return page.map { msg ->
+            val attachments =
+                (attachmentsByMessageId[msg.id] ?: emptyList())
+                    .map { AppealMessageAttachmentResponse.from(it) }
+            AppealMessageResponse.from(msg, resolveOperator(msg.senderId), attachments)
+        }
     }
 
     fun getActions(
@@ -587,8 +799,13 @@ class AppealService(
         return AppealResponse.from(appeal, assignedOperator, activeOperators)
     }
 
-    private fun toMessageResponse(message: AppealMessage): AppealMessageResponse =
-        AppealMessageResponse.from(message, resolveOperator(message.senderId))
+    private fun toMessageResponse(message: AppealMessage): AppealMessageResponse {
+        val attachments =
+            appealMessageAttachmentRepository
+                .findAllByMessageId(message.id)
+                .map { AppealMessageAttachmentResponse.from(it) }
+        return AppealMessageResponse.from(message, resolveOperator(message.senderId), attachments)
+    }
 
     companion object {
         val STATUS_LABELS =

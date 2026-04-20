@@ -1,6 +1,7 @@
 package com.base.armsupportservice.repository
 
 import com.base.armsupportservice.domain.appeal.AppealMessage
+import com.base.armsupportservice.domain.appeal.MessageDeliveryStatus
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
@@ -13,4 +14,11 @@ interface AppealMessageRepository : JpaRepository<AppealMessage, UUID> {
     ): Page<AppealMessage>
 
     fun existsByExternalMessageId(externalMessageId: String): Boolean
+
+    fun findByExternalMessageId(externalMessageId: String): AppealMessage?
+
+    fun findByAppealIdAndDeliveryStatus(
+        appealId: UUID,
+        deliveryStatus: MessageDeliveryStatus,
+    ): List<AppealMessage>
 }

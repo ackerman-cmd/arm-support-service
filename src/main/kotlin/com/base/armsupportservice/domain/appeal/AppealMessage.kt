@@ -29,6 +29,9 @@ class AppealMessage(
     val channel: AppealChannel,
     @Column(length = 512)
     val externalMessageId: String? = null,
+    @Enumerated(EnumType.STRING)
+    @Column(length = 32)
+    var deliveryStatus: MessageDeliveryStatus? = null,
     @Column(updatable = false)
     val createdAt: LocalDateTime = LocalDateTime.now(),
 )

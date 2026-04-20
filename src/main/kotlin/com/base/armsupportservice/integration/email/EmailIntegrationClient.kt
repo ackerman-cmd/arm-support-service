@@ -9,9 +9,12 @@ import com.base.armsupportservice.integration.email.dto.http.ReplyEmailRequest
 import com.base.armsupportservice.integration.email.dto.http.SendEmailRequest
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.ParameterizedTypeReference
+import org.springframework.core.io.ByteArrayResource
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
+import org.springframework.util.LinkedMultiValueMap
 import org.springframework.web.client.RestClient
+import org.springframework.web.multipart.MultipartFile
 import java.util.UUID
 
 /**
@@ -51,6 +54,70 @@ class EmailIntegrationClient(
             .retrieve()
             .body(MessageCreatedResponse::class.java)
             ?: throw IllegalStateException("Empty body from POST /internal/emails/forward")
+
+    fun sendEmailWithAttachment(
+        fromEmail: String,
+        to: List<String>,
+        subject: String,
+        textBody: String?,
+        htmlBody: String?,
+        createdByUserId: UUID?,
+        file: MultipartFile,
+    ): MessageCreatedResponse {
+        val form = LinkedMultiValueMap<String, Any>()
+        form.add("fromEmail", fromEmail)
+        to.forEach { form.add("to", it) }
+        form.add("subject", subject)
+        textBody?.let { form.add("textBody", it) }
+        htmlBody?.let { form.add("htmlBody", it) }
+        createdByUserId?.let { form.add("createdByUserId", it.toString()) }
+        val fileName = file.originalFilename ?: file.name
+        form.add(
+            "files",
+            object : ByteArrayResource(file.bytes) {
+                override fun getFilename() = fileName
+            },
+        )
+        return restClient
+            .post()
+            .uri("/internal/emails/send-with-attachments")
+            .contentType(MediaType.MULTIPART_FORM_DATA)
+            .body(form)
+            .retrieve()
+            .body(MessageCreatedResponse::class.java)
+            ?: throw IllegalStateException("Empty body from POST /internal/emails/send-with-attachments")
+    }
+
+    fun replyEmailWithAttachment(
+        conversationId: UUID,
+        to: List<String>,
+        textBody: String?,
+        htmlBody: String?,
+        createdByUserId: UUID?,
+        file: MultipartFile,
+    ): MessageCreatedResponse {
+        val form = LinkedMultiValueMap<String, Any>()
+        form.add("conversationId", conversationId.toString())
+        to.forEach { form.add("to", it) }
+        textBody?.let { form.add("textBody", it) }
+        htmlBody?.let { form.add("htmlBody", it) }
+        createdByUserId?.let { form.add("createdByUserId", it.toString()) }
+        val fileName = file.originalFilename ?: file.name
+        form.add(
+            "files",
+            object : ByteArrayResource(file.bytes) {
+                override fun getFilename() = fileName
+            },
+        )
+        return restClient
+            .post()
+            .uri("/internal/emails/reply-with-attachments")
+            .contentType(MediaType.MULTIPART_FORM_DATA)
+            .body(form)
+            .retrieve()
+            .body(MessageCreatedResponse::class.java)
+            ?: throw IllegalStateException("Empty body from POST /internal/emails/reply-with-attachments")
+    }
 
     fun getConversation(conversationId: UUID): ConversationResponse =
         restClient

@@ -2,6 +2,7 @@ package com.base.armsupportservice.dto.appeal
 
 import com.base.armsupportservice.domain.appeal.AppealChannel
 import com.base.armsupportservice.domain.appeal.AppealMessage
+import com.base.armsupportservice.domain.appeal.MessageDeliveryStatus
 import com.base.armsupportservice.domain.appeal.MessageSenderType
 import com.base.armsupportservice.dto.common.OperatorSummaryResponse
 import com.fasterxml.jackson.annotation.JsonFormat
@@ -16,6 +17,8 @@ data class AppealMessageResponse(
     val content: String,
     val channel: AppealChannel,
     val externalMessageId: String?,
+    val deliveryStatus: MessageDeliveryStatus?,
+    val attachments: List<AppealMessageAttachmentResponse>,
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     val createdAt: LocalDateTime,
 ) {
@@ -23,6 +26,7 @@ data class AppealMessageResponse(
         fun from(
             message: AppealMessage,
             sender: OperatorSummaryResponse?,
+            attachments: List<AppealMessageAttachmentResponse> = emptyList(),
         ) = AppealMessageResponse(
             id = message.id,
             appealId = message.appeal.id,
@@ -31,6 +35,8 @@ data class AppealMessageResponse(
             content = message.content,
             channel = message.channel,
             externalMessageId = message.externalMessageId,
+            deliveryStatus = message.deliveryStatus,
+            attachments = attachments,
             createdAt = message.createdAt,
         )
     }

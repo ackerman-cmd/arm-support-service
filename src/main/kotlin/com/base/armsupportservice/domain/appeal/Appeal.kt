@@ -78,6 +78,9 @@ class Appeal(
     val createdById: UUID,
     @Column(name = "email_conversation_id")
     var emailConversationId: UUID? = null,
+    /** VK peer_id пользователя/чата — заполняется для channel=CHAT, используется для отправки ответов */
+    @Column(name = "vk_peer_id")
+    var vkPeerId: Long? = null,
     var closedAt: LocalDateTime? = null,
     @Column(updatable = false)
     val createdAt: LocalDateTime = LocalDateTime.now(),

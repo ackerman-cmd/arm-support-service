@@ -135,9 +135,7 @@ class ReferenceController(
         val CHANNEL_LABELS =
             mapOf(
                 AppealChannel.EMAIL to "Электронная почта",
-                AppealChannel.LETTER to "Письмо",
-                AppealChannel.CALL to "Звонок",
-                AppealChannel.CHAT to "Чат",
+                AppealChannel.CHAT to "ВКонтакте",
             )
         val PRIORITY_LABELS =
             mapOf(

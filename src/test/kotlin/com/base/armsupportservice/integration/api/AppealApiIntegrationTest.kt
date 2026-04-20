@@ -11,13 +11,21 @@ import com.base.armsupportservice.dto.appeal.AppealRequest
 import com.base.armsupportservice.dto.appeal.AppealUpdateRequest
 import com.base.armsupportservice.dto.appeal.AssignOperatorRequest
 import com.base.armsupportservice.dto.appeal.ChangeStatusRequest
+import com.base.armsupportservice.dto.appeal.EmailMessageRequest
 import com.base.armsupportservice.integration.AbstractIntegrationTest
+import com.base.armsupportservice.integration.email.EmailIntegrationClient
+import com.base.armsupportservice.integration.email.dto.http.MessageCreatedResponse
+import com.base.armsupportservice.integration.email.dto.http.MessageStatus
+import com.base.armsupportservice.integration.vk.VkIntegrationClient
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito.`when`
+import org.mockito.kotlin.any
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.http.MediaType
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -42,6 +50,12 @@ class AppealApiIntegrationTest : AbstractIntegrationTest() {
     @Autowired
     private lateinit var inserter: TestDataInsertionUtils
 
+    @MockitoBean
+    private lateinit var emailIntegrationClient: EmailIntegrationClient
+
+    @MockitoBean
+    private lateinit var vkIntegrationClient: VkIntegrationClient
+
     private lateinit var operatorId: UUID
 
     @BeforeEach
@@ -49,6 +63,15 @@ class AppealApiIntegrationTest : AbstractIntegrationTest() {
         dbCleaner.clearAllTables()
         operatorId = UUID.randomUUID()
         inserter.insertSyncedUser(id = operatorId, username = "op1", email = "op1@test.local")
+
+        val fakeCreated =
+            MessageCreatedResponse(
+                messageId = UUID.randomUUID(),
+                conversationId = UUID.randomUUID(),
+                status = MessageStatus.QUEUED,
+            )
+        `when`(emailIntegrationClient.sendEmail(any())).thenReturn(fakeCreated)
+        `when`(emailIntegrationClient.replyEmail(any())).thenReturn(fakeCreated)
     }
 
     @Test
@@ -84,7 +107,7 @@ class AppealApiIntegrationTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `take into work and send operator message`() {
+    fun `take into work and send email operator message`() {
         val id = createAppealViaApi()
         mockMvc
             .perform(
@@ -94,13 +117,13 @@ class AppealApiIntegrationTest : AbstractIntegrationTest() {
             .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
 
         val msg =
-            AppealMessageRequest(
+            EmailMessageRequest(
                 content = "Ответ оператора",
-                channel = AppealChannel.CHAT,
+                fromEmail = "support@test.local",
             )
         mockMvc
             .perform(
-                post("/api/v1/appeals/$id/messages")
+                post("/api/v1/appeals/$id/messages/email")
                     .with(SecurityTestSupport.operator(operatorId))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(msg)),
@@ -139,12 +162,12 @@ class AppealApiIntegrationTest : AbstractIntegrationTest() {
             .andExpect(jsonPath("$.assignedOperator.id").value(otherId.toString()))
 
         val opMsg =
-            AppealMessageRequest(
+            EmailMessageRequest(
                 content = "Ждём клиента",
-                channel = AppealChannel.CHAT,
+                fromEmail = "support@test.local",
             )
         mockMvc.perform(
-            post("/api/v1/appeals/$id/messages")
+            post("/api/v1/appeals/$id/messages/email")
                 .with(SecurityTestSupport.operator(operatorId))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(opMsg)),

@@ -23,3 +23,9 @@ databaseChangeLog:
       file: db/changelog/010-create-appeal-events.sql
   - include:
       file: db/changelog/011-add-group-mailbox-emails.sql
+  - include:
+      file: db/changelog/012-add-vk-peer-id.sql
+  - include:
+      file: db/changelog/013-add-message-delivery-status.sql
+  - include:
+      file: db/changelog/014-create-appeal-message-attachments.sql

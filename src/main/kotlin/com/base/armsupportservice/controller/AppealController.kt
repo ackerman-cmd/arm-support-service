@@ -10,6 +10,8 @@ import com.base.armsupportservice.dto.appeal.AppealResponse
 import com.base.armsupportservice.dto.appeal.AppealUpdateRequest
 import com.base.armsupportservice.dto.appeal.AssignOperatorRequest
 import com.base.armsupportservice.dto.appeal.ChangeStatusRequest
+import com.base.armsupportservice.dto.appeal.ChatMessageRequest
+import com.base.armsupportservice.dto.appeal.EmailMessageRequest
 import com.base.armsupportservice.dto.common.FetchByIdsRequest
 import com.base.armsupportservice.security.UserPrincipal
 import com.base.armsupportservice.service.AppealService
@@ -21,6 +23,7 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -31,8 +34,10 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestPart
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.multipart.MultipartFile
 import java.util.UUID
 
 @RestController
@@ -149,24 +154,14 @@ class AppealController(
         @PathVariable id: UUID,
     ): AppealResponse = appealService.close(id)
 
+    // ── Messages (read + inbound webhook) ─────────────────────────────────────
+
     @GetMapping("/{id}/messages")
     @Operation(summary = "История переписки по обращению (хронологически)")
     fun getMessages(
         @PathVariable id: UUID,
         @ParameterObject @PageableDefault(size = 50) pageable: Pageable,
     ): Page<AppealMessageResponse> = appealService.getMessages(id, pageable)
-
-    @PostMapping("/{id}/messages")
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(
-        summary = "Отправить сообщение клиенту",
-        description = "Оператор отправляет сообщение. Обращение переходит в WAITING_CLIENT_RESPONSE.",
-    )
-    fun sendOperatorMessage(
-        @PathVariable id: UUID,
-        @Valid @RequestBody request: AppealMessageRequest,
-        @AuthenticationPrincipal principal: UserPrincipal,
-    ): AppealMessageResponse = appealService.sendOperatorMessage(id, request, principal)
 
     @PostMapping("/{id}/messages/inbound")
     @ResponseStatus(HttpStatus.CREATED)
@@ -178,6 +173,72 @@ class AppealController(
         @PathVariable id: UUID,
         @Valid @RequestBody request: AppealMessageRequest,
     ): AppealMessageResponse = appealService.receiveClientMessage(id, request)
+
+    // ── Outbound: EMAIL channel ────────────────────────────────────────────────
+
+    @PostMapping("/{id}/messages/email")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(
+        summary = "Отправить email-сообщение клиенту",
+        description =
+            "Оператор отправляет письмо. " +
+                "При первом письме обязателен fromEmail. " +
+                "Обращение переходит в WAITING_CLIENT_RESPONSE.",
+    )
+    fun sendEmailMessage(
+        @PathVariable id: UUID,
+        @Valid @RequestBody request: EmailMessageRequest,
+        @AuthenticationPrincipal principal: UserPrincipal,
+    ): AppealMessageResponse = appealService.sendEmailMessage(id, request, principal)
+
+    @PostMapping("/{id}/messages/email/with-attachment", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(
+        summary = "Отправить email-сообщение с вложением клиенту",
+        description =
+            "Отправляет через email-integration-service с файловым вложением. " +
+                "При первом письме обязателен fromEmail. " +
+                "Обращение переходит в WAITING_CLIENT_RESPONSE.",
+    )
+    fun sendEmailMessageWithAttachment(
+        @PathVariable id: UUID,
+        @RequestPart("content", required = false) content: String?,
+        @RequestPart("fromEmail", required = false) fromEmail: String?,
+        @RequestPart("htmlContent", required = false) htmlContent: String?,
+        @RequestPart("file") file: MultipartFile,
+        @AuthenticationPrincipal principal: UserPrincipal,
+    ): AppealMessageResponse = appealService.sendEmailMessageWithAttachment(id, content ?: "", fromEmail, htmlContent, file, principal)
+
+    // ── Outbound: CHAT (VK) channel ────────────────────────────────────────────
+
+    @PostMapping("/{id}/messages/chat")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(
+        summary = "Отправить VK-сообщение клиенту",
+        description = "Оператор отправляет сообщение через VK. Обращение переходит в WAITING_CLIENT_RESPONSE.",
+    )
+    fun sendChatMessage(
+        @PathVariable id: UUID,
+        @Valid @RequestBody request: ChatMessageRequest,
+        @AuthenticationPrincipal principal: UserPrincipal,
+    ): AppealMessageResponse = appealService.sendChatMessage(id, request, principal)
+
+    @PostMapping("/{id}/messages/chat/with-attachment", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(
+        summary = "Отправить VK-сообщение с вложением клиенту",
+        description =
+            "Загружает файл в vk_service → VK API и отправляет с вложением. " +
+                "Обращение переходит в WAITING_CLIENT_RESPONSE.",
+    )
+    fun sendChatMessageWithAttachment(
+        @PathVariable id: UUID,
+        @RequestPart("content", required = false) content: String?,
+        @RequestPart("file") file: MultipartFile,
+        @AuthenticationPrincipal principal: UserPrincipal,
+    ): AppealMessageResponse = appealService.sendChatMessageWithAttachment(id, content ?: "", file, principal)
+
+    // ── Events & Actions ───────────────────────────────────────────────────────
 
     @GetMapping("/{id}/events")
     @Operation(
@@ -202,6 +263,8 @@ class AppealController(
         @PathVariable id: UUID,
         @AuthenticationPrincipal principal: UserPrincipal,
     ): AppealActionsResponse = appealService.getActions(id, principal)
+
+    // ── Batch ──────────────────────────────────────────────────────────────────
 
     @PostMapping("/fetch")
     @Operation(

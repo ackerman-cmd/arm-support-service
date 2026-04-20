@@ -128,7 +128,7 @@ class EmailEventService(
                 existing.id,
                 convId,
             )
-            saveClientMessage(existing, event.messageId, event.subject)
+            saveClientMessage(existing, event.messageId, event.textBody, event.htmlBody, event.subject)
             return
         }
 
@@ -143,7 +143,7 @@ class EmailEventService(
                 createdById = SYSTEM_USER_ID,
             )
         appealRepository.save(appeal)
-        saveClientMessage(appeal, event.messageId, event.subject)
+        saveClientMessage(appeal, event.messageId, event.textBody, event.htmlBody, event.subject)
         log.info(
             "email.inbound.persisted: created appeal id={} for conversationId={}",
             appeal.id,
@@ -175,24 +175,39 @@ class EmailEventService(
             )
         }
 
-        saveClientMessage(appeal, event.messageId, event.subject)
+        saveClientMessage(appeal, event.messageId, event.textBody, event.htmlBody, event.subject)
     }
 
     private fun saveClientMessage(
         appeal: Appeal,
         externalMessageId: String,
+        textBody: String?,
+        htmlBody: String?,
         subject: String?,
     ) {
+        // Prefer plain text body; fall back to a stripped version of HTML; last resort — subject.
+        val content =
+            textBody?.ifBlank { null }
+                ?: htmlBody?.let { stripHtmlTags(it) }?.ifBlank { null }
+                ?: subject?.ifBlank { null }
+                ?: "(нет содержимого)"
         val message =
             AppealMessage(
                 appeal = appeal,
                 senderType = MessageSenderType.CLIENT,
-                content = subject?.ifBlank { null } ?: "(без темы)",
+                content = content,
                 channel = AppealChannel.EMAIL,
                 externalMessageId = externalMessageId,
             )
         appealMessageRepository.save(message)
     }
+
+    /** Removes HTML tags for storing a readable plain-text snapshot of the email body. */
+    private fun stripHtmlTags(html: String): String =
+        html
+            .replace(Regex("<[^>]+>"), " ")
+            .replace(Regex("\\s{2,}"), " ")
+            .trim()
 
     companion object {
         /** Системный пользователь — автор обращений, созданных автоматически из входящей почты. */
