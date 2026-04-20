@@ -185,12 +185,12 @@ class EmailEventService(
         htmlBody: String?,
         subject: String?,
     ) {
-        // Prefer plain text body; fall back to a stripped version of HTML; last resort — subject.
+        // Prefer plain text body; fall back to stripped HTML; then subject placeholder.
+        val subjectFallback = subject?.ifBlank { null } ?: "(без темы)"
         val content =
             textBody?.ifBlank { null }
                 ?: htmlBody?.let { stripHtmlTags(it) }?.ifBlank { null }
-                ?: subject?.ifBlank { null }
-                ?: "(нет содержимого)"
+                ?: subjectFallback
         val message =
             AppealMessage(
                 appeal = appeal,

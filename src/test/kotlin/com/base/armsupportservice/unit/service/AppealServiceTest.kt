@@ -58,7 +58,7 @@ class AppealServiceTest {
     private val permissionService: PermissionService = PermissionService()
     private val emailIntegrationClient: EmailIntegrationClient = mockk(relaxed = true)
     private val vkIntegrationClient: VkIntegrationClient = mockk(relaxed = true)
-    private val appealMessageAttachmentRepository: AppealMessageAttachmentRepository = mockk()
+    private val appealMessageAttachmentRepository: AppealMessageAttachmentRepository = mockk(relaxed = true)
 
     private val service =
         AppealService(

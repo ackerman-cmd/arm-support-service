@@ -39,6 +39,8 @@ class EmailEventServiceTest {
         isNewConversation: Boolean = true,
         fromEmail: String = "client@example.com",
         subject: String? = "Test subject",
+        textBody: String? = "text",
+        htmlBody: String? = "text",
     ) = EmailInboundPersistedEvent(
         messageId = messageId,
         conversationId = conversationId,
@@ -49,8 +51,8 @@ class EmailEventServiceTest {
         internetMessageId = null,
         isNewConversation = isNewConversation,
         receivedAt = Instant.now().toString(),
-        textBody = "text",
-        htmlBody = "text",
+        textBody = textBody,
+        htmlBody = htmlBody,
     )
 
     private fun savedAppeal(
@@ -193,7 +195,8 @@ class EmailEventServiceTest {
     @Test
     fun `null subject falls back to placeholder`() {
         val convId = UUID.randomUUID()
-        val event = inboundEvent(conversationId = convId.toString(), isNewConversation = true, subject = null)
+        val event =
+            inboundEvent(conversationId = convId.toString(), isNewConversation = true, subject = null, textBody = null, htmlBody = null)
 
         every { appealMessageRepository.existsByExternalMessageId(event.messageId) } returns false
         every { appealRepository.findByEmailConversationId(convId) } returns null
