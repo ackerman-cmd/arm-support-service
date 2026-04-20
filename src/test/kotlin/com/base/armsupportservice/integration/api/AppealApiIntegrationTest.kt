@@ -68,7 +68,7 @@ class AppealApiIntegrationTest : AbstractIntegrationTest() {
             MessageCreatedResponse(
                 messageId = UUID.randomUUID(),
                 conversationId = UUID.randomUUID(),
-                status = MessageStatus.QUEUED,
+                status = MessageStatus.PENDING_SEND,
             )
         `when`(emailIntegrationClient.sendEmail(any())).thenReturn(fakeCreated)
         `when`(emailIntegrationClient.replyEmail(any())).thenReturn(fakeCreated)
