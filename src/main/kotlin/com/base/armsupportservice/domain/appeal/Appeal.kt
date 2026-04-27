@@ -81,6 +81,9 @@ class Appeal(
     /** VK peer_id пользователя/чата — заполняется для channel=CHAT, используется для отправки ответов */
     @Column(name = "vk_peer_id")
     var vkPeerId: Long? = null,
+    /** Краткое резюме обращения, проставляется автоматически LLM-сервисом */
+    @Column(columnDefinition = "TEXT")
+    var summary: String? = null,
     var closedAt: LocalDateTime? = null,
     @Column(updatable = false)
     val createdAt: LocalDateTime = LocalDateTime.now(),

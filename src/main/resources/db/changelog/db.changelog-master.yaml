@@ -29,3 +29,5 @@ databaseChangeLog:
       file: db/changelog/013-add-message-delivery-status.sql
   - include:
       file: db/changelog/014-create-appeal-message-attachments.sql
+  - include:
+      file: db/changelog/015-add-llm-enrichment-to-appeals.sql

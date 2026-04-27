@@ -14,4 +14,5 @@ data class KafkaTopicsProperties(
     var vkMessageReceived: String = "vk.message.received",
     var vkMessageSent: String = "vk.message.sent",
     var vkMessageFailed: String = "vk.message.failed",
+    var llmAppealEnriched: String = "llm.appeal.enriched",
 )

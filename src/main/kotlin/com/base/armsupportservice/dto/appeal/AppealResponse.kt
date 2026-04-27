@@ -35,6 +35,8 @@ data class AppealResponse(
     val skillGroup: SkillGroupSummaryResponse?,
     val createdById: UUID,
     val emailConversationId: UUID?,
+    /** Краткое резюме обращения, сгенерированное LLM-сервисом автоматически */
+    val summary: String?,
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     val closedAt: LocalDateTime?,
     @JsonFormat(shape = JsonFormat.Shape.STRING)
@@ -66,6 +68,7 @@ data class AppealResponse(
             skillGroup = appeal.skillGroup?.let { SkillGroupSummaryResponse.from(it) },
             createdById = appeal.createdById,
             emailConversationId = appeal.emailConversationId,
+            summary = appeal.summary,
             closedAt = appeal.closedAt,
             createdAt = appeal.createdAt,
             updatedAt = appeal.updatedAt,

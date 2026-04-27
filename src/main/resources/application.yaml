@@ -79,6 +79,7 @@ app:
       vk-message-received: vk.message.received
       vk-message-sent: vk.message.sent
       vk-message-failed: vk.message.failed
+      llm-appeal-enriched: llm.appeal.enriched
   email-integration:
     base-url: ${EMAIL_INTEGRATION_URL}
     kafka-consumers-enabled: true
