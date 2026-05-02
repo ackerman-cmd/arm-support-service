@@ -9,5 +9,5 @@ data class EmailIntegrationProperties(
     /** Включить Kafka consumer-ы событий почты (топики из раздела 3 контракта) */
     var kafkaConsumersEnabled: Boolean = true,
     var connectTimeoutMillis: Long = 5_000,
-    var readTimeoutMillis: Long = 30_000,
+    var readTimeoutMillis: Long = 120_000,
 )
