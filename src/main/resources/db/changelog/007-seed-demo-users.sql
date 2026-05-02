@@ -1,3 +1,6 @@
+-- liquibase formatted sql
+-- changeset arm-support:007-seed-demo-users runOnChange:false
+
 INSERT INTO arm_support.synced_users (id, email, username, first_name, last_name, status, email_verified, roles, synced_at,
                                         created_at)
 VALUES ('d0e0f000-d001-4000-8000-000000000001'::uuid,
